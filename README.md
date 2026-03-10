@@ -13,11 +13,18 @@ run P1_1a --kill  # stop typst watch
 ## Structure
 
 ```
-src/bin/P<sheet>_<ex>.rs                  # Rust simulation binaries
-typst/Kronberger_P<sheet>_<ex><part>.typ  # Typst plot files
-data/                                     # Generated JSON (gitignored)
-output/                                   # Generated PDFs
-exercises/                                # Problem sheets
+statphys/
+├── src/
+│   ├── lib.rs                              # shared helpers
+│   └── bin/
+│       └── P<sheet>_<ex>.rs                # simulation binaries
+├── typst/
+│   └── Kronberger_P<sheet>_<ex><part>.typ  # plot files
+├── data/                                   # generated JSON (gitignored)
+├── output/                                 # generated PDFs
+├── exercises/                              # problem sheets
+├── run.nu                                  # build + preview script
+└── flake.nix                               # nix dev environment
 ```
 
 ## Dependencies
