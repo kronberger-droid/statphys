@@ -1,18 +1,7 @@
 # Build, plot, and preview a statphys exercise.
+# Blocks on typst watch. Ctrl+C kills watch and closes zathura.
 # Usage: run P1_1a
-#        run P1_1a --kill  (stop typst watch for this file)
-def main [name: string, --kill] {
-  if $kill {
-    let procs = ps | where name == "typst" | where command =~ $name
-    if ($procs | is-empty) {
-      print $"(ansi yellow)No typst watch(ansi reset) running for ($name)"
-    } else {
-      $procs | each { |p| kill $p.pid }
-      print $"(ansi red)Killed(ansi reset) typst watch for ($name)"
-    }
-    return
-  }
-
+def main [name: string] {
   let bin = $name | str replace -r '[a-z]$' ''
   let typ = $"typst/Kronberger_($name).typ"
   let pdf = ($"output/Kronberger_($name).pdf" | path expand)
@@ -20,19 +9,11 @@ def main [name: string, --kill] {
   print $"(ansi cyan)Building(ansi reset) cargo run --bin ($bin)"
   cargo run --bin $bin
 
-  # Check if typst watch is already running for this file
-  let watch_running = (ps | where name == "typst" | where command =~ $name | length) > 0
+  # Compile once so the PDF exists before opening zathura
+  print $"(ansi cyan)Compiling(ansi reset) ($typ)"
+  typst compile --root ../ $typ $pdf
 
-  if not $watch_running {
-    print $"(ansi cyan)Starting(ansi reset) typst watch ($typ)"
-    bash -c $"typst watch --root ../ ($typ) ($pdf) > /dev/null 2>&1 &"
-  } else {
-    print $"(ansi green)Typst watch(ansi reset) already running"
-  }
-
-  # Give typst watch a moment to produce the first PDF
-  sleep 300ms
-
+  # Open zathura if not already open
   let windows = niri msg -j windows | from json
   let not_open = ($windows | where app_id == "org.pwmt.zathura" | where title =~ $pdf | is-empty)
 
@@ -42,7 +23,10 @@ def main [name: string, --kill] {
     sleep 500ms
     niri msg action consume-or-expel-window-right
     niri msg action focus-column-left
-  } else {
-    print $"(ansi green)Zathura(ansi reset) already open, reloading"
   }
+
+  # Block on typst watch with trap for cleanup
+  print $"(ansi cyan)Watching(ansi reset) ($typ) \(Ctrl+C to stop\)"
+  let bash_cmd = "trap 'pkill -f \"zathura.*" + $name + "\"' EXIT; typst watch --root ../ " + $typ + " " + $pdf
+  bash -c $bash_cmd
 }
