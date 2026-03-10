@@ -34,6 +34,8 @@
     height: 100%,
     xlabel: $x$,
     ylabel: $p(x)$,
+    ylim: (0.0, 0.3),
+    xlim: (-45.0, +45.0),
     lq.bar(centers, density, width: bin-with, label: [simulation]),
     lq.plot(
       x-theory,
