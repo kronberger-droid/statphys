@@ -37,12 +37,19 @@ fn main() {
                 .map(|i| -0.5 + i as f64 / n_points as f64)
                 .collect();
             let p: Vec<f64> = x.iter().map(|&xi| p_analytical(xi, tau, n_terms)).collect();
-            Curve { dt_over_l2: tau, x, p }
+            Curve {
+                dt_over_l2: tau,
+                x,
+                p,
+            }
         })
         .collect();
 
-    let output = Output { reduced_times: reduced_times.clone(), curves };
+    let output = Output {
+        reduced_times: reduced_times.clone(),
+        curves,
+    };
 
-    let file = std::fs::File::create("data/P1_3.json").expect("failed to create output file");
+    let file = statphys::create_data_file("data/P1_3.json");
     serde_json::to_writer_pretty(file, &output).expect("failed to write JSON");
 }

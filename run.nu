@@ -7,7 +7,7 @@ def main [name: string] {
   let pdf = ($"output/Kronberger_($name).pdf" | path expand)
 
   print $"(ansi cyan)Building(ansi reset) cargo run --bin ($bin)"
-  cargo run --bin $bin
+  cargo run --release --bin $bin
 
   # Compile once so the PDF exists before opening zathura
   print $"(ansi cyan)Compiling(ansi reset) ($typ)"
