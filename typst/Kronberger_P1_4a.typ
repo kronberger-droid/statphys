@@ -1,6 +1,8 @@
 #import "@preview/lilaq:0.5.0" as lq
 
-#let data = json("../data/P1_4.json")
+#set page(flipped: true, margin: (x: 1.2cm, top: 0.8cm, bottom: 1cm))
+
+#let data = json("../data/P1_4a.json")
 #let reflect = data.at("methods").at(0)
 #let analytical = data.at("analytical")
 
@@ -30,44 +32,33 @@
   )
 }
 
-#align(center)[#text(
-  size: 20pt,
-)[Kronberger P1\_4a: Numerical diffusion with reflecting walls]]
-
+#align(center)[#text(size: 16pt)[Kronberger P1\_4a: Numerical diffusion with reflecting walls]]
+#v(0.2em)
 #align(center)[
-  #box(stroke: 0.5pt + luma(180), inset: 6pt, radius: 3pt)[
-    #set text(size: 10pt)
-    #box(rect(width: 12pt, height: 8pt, fill: blue.lighten(40%))) simulation
-    #h(1.5em)
-    #box(line(length: 16pt, stroke: 1.5pt + red)) analytical
+  #box(stroke: 0.5pt + luma(180), inset: 5pt, radius: 3pt)[
+    #set text(size: 9pt)
+    #box(rect(width: 10pt, height: 7pt, fill: blue.lighten(40%))) simulation
+    #h(1.2em)
+    #box(line(length: 14pt, stroke: 1.5pt + red)) analytical
   ]
 ]
+#v(0.3em)
 
-#box(height: 40%, grid(
+#block(height: 78%, width: 100%, grid(
   columns: (1fr, 1fr),
-  gutter: 1.2em,
-  ..range(2).map(i => make-plot(i)),
+  rows: (1fr, 1fr),
+  gutter: 0.8em,
+  ..range(4).map(i => make-plot(i)),
 ))
 
-#box(height: 40%, grid(
-  columns: (1fr, 1fr),
-  gutter: 1.2em,
-  ..range(2, 4).map(i => make-plot(i)),
-))
+#pagebreak()
 
-#box(height: 40%, grid(
+#grid(
   columns: (1fr, 1fr),
-  gutter: 1.2em,
-  ..range(4, 6).map(i => make-plot(i)),
-))
-
-#box(height: 40%, grid(
-  columns: (1fr, 1fr),
-  gutter: 1.2em,
-  ..range(6, 7).map(i => make-plot(i)),
-))
-
-#figure(
-  [],
-  caption: [Numerical simulation of $10^5$ Gaussian random walkers with reflecting walls compared to the analytical solution. The walker is reflected via $x(t + Delta t) = L - [x(t) + Delta x]$ when hitting a wall.],
+  rows: (1fr, 1fr),
+  gutter: 0.8em,
+  ..range(4, 7).map(i => make-plot(i)),
+  align(center + horizon)[#text(size: 9pt, style: "italic")[
+    Numerical simulation of $10^5$ Gaussian random walkers with reflecting walls compared to the analytical solution. The walker is reflected via $x(t + Delta t) = L - [x(t) + Delta x]$ when hitting a wall.
+  ]],
 )

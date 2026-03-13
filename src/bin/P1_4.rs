@@ -1,17 +1,21 @@
 use rand_distr::{Distribution, Normal};
 use serde::Serialize;
+use statphys::AnalyticalCurve;
 
 const L: f64 = 1.0;
 const HALF_L: f64 = L / 2.0;
 const N_TRAJ: usize = 100_000;
 const N_BINS: usize = 60;
-const SIGMA: f64 = 0.01;
-const N_TERMS: usize = 200;
+
+// Small sigma for 4a (fine resolution, matches analytical well at early times)
+const SIGMA_A: f64 = 0.01;
+// Larger sigma for 4b (exaggerates wall-handling artifacts)
+const SIGMA_B: f64 = 0.05;
 
 #[derive(Serialize)]
 struct Output {
     methods: Vec<MethodData>,
-    analytical: Vec<Curve>,
+    analytical: Vec<AnalyticalCurve>,
 }
 
 #[derive(Serialize)]
@@ -27,37 +31,6 @@ struct HistogramCurve {
     density: Vec<f64>,
 }
 
-#[derive(Serialize)]
-struct Curve {
-    dt_over_l2: f64,
-    x: Vec<f64>,
-    p: Vec<f64>,
-}
-
-/// Analytical solution from exercise 3 (L=1)
-fn p_analytical(x: f64, tau: f64) -> f64 {
-    let mut result = 1.0;
-    for n in 1..=N_TERMS {
-        let k = 2.0 * std::f64::consts::PI * n as f64;
-        result += 2.0 * (k * x).cos() * (-k * k * tau).exp();
-    }
-    result
-}
-
-/// Reflect position into [-L/2, +L/2] using folding
-fn reflect(mut x: f64) -> f64 {
-    // Fold into [-L/2, +L/2] by reflecting at walls
-    loop {
-        if x > HALF_L {
-            x = L - x; // reflect at +L/2
-        } else if x < -HALF_L {
-            x = -L - x; // reflect at -L/2
-        } else {
-            return x;
-        }
-    }
-}
-
 enum WallMethod {
     Reflect,
     StopAtWall,
@@ -65,9 +38,9 @@ enum WallMethod {
     Redraw,
 }
 
-fn simulate(tau: f64, method: &WallMethod, rng: &mut impl rand::Rng) -> Vec<f64> {
-    let n_steps = (2.0 * tau / (SIGMA * SIGMA)).round() as usize;
-    let normal = Normal::new(0.0, SIGMA).unwrap();
+fn simulate(tau: f64, sigma: f64, method: &WallMethod, rng: &mut impl rand::Rng) -> Vec<f64> {
+    let n_steps = (2.0 * tau / (sigma * sigma)).round() as usize;
+    let normal = Normal::new(0.0, sigma).unwrap();
     let mut positions = Vec::with_capacity(N_TRAJ);
 
     for _ in 0..N_TRAJ {
@@ -75,7 +48,7 @@ fn simulate(tau: f64, method: &WallMethod, rng: &mut impl rand::Rng) -> Vec<f64>
         for _ in 0..n_steps {
             match method {
                 WallMethod::Reflect => {
-                    x = reflect(x + normal.sample(rng));
+                    x = statphys::reflect(x + normal.sample(rng), HALF_L);
                 }
                 WallMethod::StopAtWall => {
                     let x_new = x + normal.sample(rng);
@@ -86,7 +59,6 @@ fn simulate(tau: f64, method: &WallMethod, rng: &mut impl rand::Rng) -> Vec<f64>
                     if (-HALF_L..=HALF_L).contains(&x_new) {
                         x = x_new;
                     }
-                    // else: x stays the same
                 }
                 WallMethod::Redraw => loop {
                     let dx = normal.sample(rng);
@@ -103,81 +75,80 @@ fn simulate(tau: f64, method: &WallMethod, rng: &mut impl rand::Rng) -> Vec<f64>
     positions
 }
 
-fn histogram(positions: &[f64]) -> (Vec<f64>, Vec<f64>) {
-    let bin_width = L / N_BINS as f64;
-    let mut counts = vec![0usize; N_BINS];
-
-    for &x in positions {
-        let idx = ((x + HALF_L) / bin_width) as usize;
-        let idx = idx.min(N_BINS - 1);
-        counts[idx] += 1;
-    }
-
-    let n = positions.len() as f64;
-    let bin_centers: Vec<f64> = (0..N_BINS)
-        .map(|i| -HALF_L + (i as f64 + 0.5) * bin_width)
+fn simulate_method(
+    name: &str,
+    method: &WallMethod,
+    sigma: f64,
+    reduced_times: &[f64],
+    rng: &mut impl rand::Rng,
+) -> MethodData {
+    eprintln!("Simulating method: {}", name);
+    let curves = reduced_times
+        .iter()
+        .map(|&tau| {
+            let positions = simulate(tau, sigma, method, rng);
+            let h = statphys::histogram_fixed(&positions, N_BINS, -HALF_L, HALF_L);
+            HistogramCurve {
+                dt_over_l2: tau,
+                bin_centers: h.bin_centers,
+                density: h.density,
+            }
+        })
         .collect();
-    let density: Vec<f64> = counts.iter().map(|&c| c as f64 / (n * bin_width)).collect();
-    (bin_centers, density)
+    MethodData {
+        name: name.to_string(),
+        curves,
+    }
 }
 
 fn main() {
     let mut rng = rand::rng();
     let reduced_times = [0.001, 0.01, 0.02, 0.03, 0.04, 0.05, 0.1];
+    let analytical = statphys::analytical_reflecting_curves(&reduced_times, 500, 200);
 
-    let methods_spec: Vec<(&str, WallMethod)> = vec![
-        ("reflect", WallMethod::Reflect),
-        ("stop_at_wall", WallMethod::StopAtWall),
-        ("dont_move", WallMethod::DontMove),
-        ("redraw", WallMethod::Redraw),
-    ];
+    // 4a: reflect only, small sigma
+    {
+        eprintln!("=== P1_4a (sigma={}) ===", SIGMA_A);
+        let methods = vec![simulate_method(
+            "reflect",
+            &WallMethod::Reflect,
+            SIGMA_A,
+            &reduced_times,
+            &mut rng,
+        )];
 
-    let methods: Vec<MethodData> = methods_spec
-        .iter()
-        .map(|(name, method)| {
-            eprintln!("Simulating method: {}", name);
-            let curves: Vec<HistogramCurve> = reduced_times
-                .iter()
-                .map(|&tau| {
-                    let positions = simulate(tau, method, &mut rng);
-                    let (bin_centers, density) = histogram(&positions);
-                    HistogramCurve {
-                        dt_over_l2: tau,
-                        bin_centers,
-                        density,
-                    }
-                })
-                .collect();
-            MethodData {
-                name: name.to_string(),
-                curves,
-            }
-        })
-        .collect();
+        let output = Output {
+            methods,
+            analytical: analytical.clone(),
+        };
+        let file = statphys::create_data_file("data/P1_4a.json");
+        serde_json::to_writer_pretty(file, &output).expect("failed to write JSON");
+        eprintln!("Wrote data/P1_4a.json");
+    }
 
-    // Analytical curves
-    let n_points = 500;
-    let analytical: Vec<Curve> = reduced_times
-        .iter()
-        .map(|&tau| {
-            let x: Vec<f64> = (0..=n_points)
-                .map(|i| -0.5 + i as f64 / n_points as f64)
-                .collect();
-            let p: Vec<f64> = x.iter().map(|&xi| p_analytical(xi, tau)).collect();
-            Curve {
-                dt_over_l2: tau,
-                x,
-                p,
-            }
-        })
-        .collect();
+    // 4b: all methods, larger sigma to show wall artifacts
+    {
+        eprintln!("=== P1_4b (sigma={}) ===", SIGMA_B);
+        let methods_spec: Vec<(&str, WallMethod)> = vec![
+            ("reflect", WallMethod::Reflect),
+            ("stop_at_wall", WallMethod::StopAtWall),
+            ("dont_move", WallMethod::DontMove),
+            ("redraw", WallMethod::Redraw),
+        ];
 
-    let output = Output {
-        methods,
-        analytical,
-    };
+        let methods: Vec<MethodData> = methods_spec
+            .iter()
+            .map(|(name, method)| {
+                simulate_method(name, method, SIGMA_B, &reduced_times, &mut rng)
+            })
+            .collect();
 
-    let file = statphys::create_data_file("data/P1_4.json");
-    serde_json::to_writer_pretty(file, &output).expect("failed to write JSON");
-    eprintln!("Done. Wrote data/P1_4.json");
+        let output = Output {
+            methods,
+            analytical: analytical.clone(),
+        };
+        let file = statphys::create_data_file("data/P1_4b.json");
+        serde_json::to_writer_pretty(file, &output).expect("failed to write JSON");
+        eprintln!("Wrote data/P1_4b.json");
+    }
 }

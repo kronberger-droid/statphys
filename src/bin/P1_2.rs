@@ -21,8 +21,7 @@ fn discrete_walk_histogram(
     n_traj: usize,
     rng: &mut impl rand::Rng,
 ) -> HistogramData {
-    // Collect final positions from many independent walks
-    let mut final_positions = Vec::with_capacity(n_traj);
+    let mut counts: HashMap<i64, usize> = HashMap::new();
 
     for _ in 0..n_traj {
         let mut x: i64 = 0;
@@ -33,17 +32,11 @@ fn discrete_walk_histogram(
                 x -= 1;
             }
         }
-        final_positions.push(x);
+        *counts.entry(x).or_insert(0) += 1;
     }
 
-    let mut counts: HashMap<i64, usize> = HashMap::new();
-    for &pos in &final_positions {
-        *counts.entry(pos).or_insert(0) += 1;
-    }
-
-    // Probability density: since positions are discrete with spacing 2,
-    // normalize so that sum over all positions equal 1
-    // factor 2 comes from bin width being 2
+    // Probability density: positions are discrete with spacing 2,
+    // normalize so that sum over all positions equals 1
     let density: HashMap<i64, f64> = counts
         .iter()
         .map(|(&pos, &c)| (pos, c as f64 / (2.0 * n_traj as f64)))
@@ -73,6 +66,6 @@ fn main() {
         histograms,
     };
 
-    let file = std::fs::File::create("data/P1_2.json").expect("failed to create output file");
+    let file = statphys::create_data_file("data/P1_2.json");
     serde_json::to_writer_pretty(file, &output).expect("failed to write JSON");
 }

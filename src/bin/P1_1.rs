@@ -1,6 +1,7 @@
 use ndarray::{Array1, Array2, Axis};
 use rand_distr::{Distribution, Normal};
 use serde::Serialize;
+use statphys::histogram_auto;
 
 #[derive(Serialize)]
 struct Output {
@@ -16,32 +17,6 @@ struct HistogramData {
     step: usize,
     bin_centers: Vec<f64>,
     density: Vec<f64>,
-}
-
-fn bin_positions(positions: &[f64], n_bins: usize) -> HistogramData {
-    let min = positions.iter().cloned().reduce(f64::min).unwrap();
-    let max = positions.iter().cloned().reduce(f64::max).unwrap();
-    let margin = (max - min) * 0.05;
-    let lo = min - margin;
-    let hi = max + margin;
-    let bin_width = (hi - lo) / n_bins as f64;
-
-    let mut counts = vec![0usize; n_bins];
-    for &x in positions {
-        let idx = ((x - lo) / bin_width) as usize;
-        let idx = idx.min(n_bins - 1);
-        counts[idx] += 1;
-    }
-
-    let n = positions.len() as f64;
-    let bin_centers: Vec<f64> = (0..n_bins).map(|i| lo + (i as f64 + 0.5) * bin_width).collect();
-    let density: Vec<f64> = counts.iter().map(|&c| c as f64 / (n * bin_width)).collect();
-
-    HistogramData {
-        step: 0, // filled in by caller
-        bin_centers,
-        density,
-    }
 }
 
 fn main() {
@@ -68,14 +43,17 @@ fn main() {
 
     let x2_mean = samples.mapv(|x| x * x).mean_axis(Axis(1)).unwrap();
 
-    let hist_steps = [(2, 1), (5, 4), (20, 19), (100, 99)]; // (step, row_index)
+    let hist_steps = [(2, 1), (5, 4), (20, 19), (100, 99)];
     let histograms: Vec<HistogramData> = hist_steps
         .iter()
         .map(|&(step, row_idx)| {
             let positions = samples.row(row_idx);
-            let mut h = bin_positions(positions.as_slice().unwrap(), 50);
-            h.step = step;
-            h
+            let h = histogram_auto(positions.as_slice().unwrap(), 50);
+            HistogramData {
+                step,
+                bin_centers: h.bin_centers,
+                density: h.density,
+            }
         })
         .collect();
 
@@ -87,6 +65,6 @@ fn main() {
         histograms,
     };
 
-    let file = std::fs::File::create("data/P1_1.json").expect("failed to create output file");
+    let file = statphys::create_data_file("data/P1_1.json");
     serde_json::to_writer_pretty(file, &output).expect("failed to write JSON");
 }
