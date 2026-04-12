@@ -23,12 +23,12 @@ statphys/
 ├── data/                                   # generated JSON (gitignored)
 ├── output/                                 # generated PDFs
 ├── exercises/                              # problem sheets
-├── run.nu                                  # build + preview script
+├── run.nu                                  # build + preview script (optional)
 └── flake.nix                               # nix dev environment
 ```
 
 ## Dependencies
 
-- **Rust**: rand, rand_distr, ndarray, statrs, serde, serde_json
+- **Rust**: rustup (dependencies defined in src/Cargo.toml)
 - **Typst**: lilaq
-- **System**: nix (flake), typst, zathura, niri
+- **Dev**: nix (flakes enabled)
