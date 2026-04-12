@@ -38,6 +38,11 @@
           cargo-expand
           typst
         ];
+        pythonEnv = pkgs.python313.withPackages (ps:
+          with ps; [
+            numpy
+            matplotlib
+          ]);
       in {
         devShells.default = pkgs.mkShell {
           name = "statphys-dev";
@@ -46,11 +51,13 @@
               rustTools.stable
               rustTools.analyzer
               run
+              pythonEnv
             ]
             ++ devTools;
 
           shellHook = ''
             echo "Using Rust toolchain: $(rustc --version)"
+            export LD_LIBRARY_PATH="${pythonEnv}/lib:$LD_LIBRARY_PATH"
             export CARGO_HOME="$HOME/.cargo"
             export RUSTUP_HOME="$HOME/.rustup"
             mkdir -p "$CARGO_HOME" "$RUSTUP_HOME"
