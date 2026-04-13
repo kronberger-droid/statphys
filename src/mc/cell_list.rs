@@ -11,9 +11,8 @@ pub struct CellList {
 impl CellList {
     /// Build a new cell list for a box of side `box_length` with minimum cell size `sigma`.
     pub fn new(box_length: f64, sigma: f64) -> Self {
-        let cell_size = box_length / (box_length / sigma);
-
-        let cells_per_side = (box_length / cell_size) as usize;
+        let cells_per_side = (box_length / sigma) as usize;
+        let cell_size = box_length / cells_per_side as f64;
 
         let cells = vec![Vec::new(); cells_per_side * cells_per_side];
 
@@ -25,11 +24,12 @@ impl CellList {
     }
 
     /// Rebuild the entire grid from scratch given particle positions.
-    pub fn rebuild(&mut self, positions: &[Position2D], box_length: f64) {
+    pub fn rebuild(&mut self, positions: &[Position2D]) {
         // Clear current cells (.clear() means memory stays allocated)
         self.cells.iter_mut().for_each(Vec::clear);
         for (i, pos) in positions.iter().enumerate() {
-            let cx = box_length / pos.x;
+            let idx = self.cell_index(*pos);
+            self.cells[idx].push(i);
         }
     }
 
@@ -40,7 +40,16 @@ impl CellList {
         old_pos: Position2D,
         new_pos: Position2D,
     ) {
-        todo!()
+        let old_idx = self.cell_index(old_pos);
+        let new_idx = self.cell_index(new_pos);
+        if old_idx != new_idx {
+            let pos = self.cells[old_idx]
+                .iter()
+                .position(|&p| p == index)
+                .unwrap();
+            self.cells[old_idx].swap_remove(pos);
+            self.cells[new_idx].push(index);
+        }
     }
 
     /// Iterator over all particle indices in the 3×3 neighborhood of `pos`.
@@ -48,11 +57,31 @@ impl CellList {
         &self,
         pos: Position2D,
     ) -> impl Iterator<Item = usize> + '_ {
-        todo!();
-        std::iter::empty()
+        let cx = (pos.x / self.cell_size) as usize;
+        let cy = (pos.y / self.cell_size) as usize;
+
+        // Collect the 9 cell flat-indices on the stack
+        let mut cell_indices = [0usize; 9];
+        let mut i = 0;
+        for dx in [-1i32, 0, 1] {
+            for dy in [-1i32, 0, 1] {
+                let nx = (cx + self.cells_per_side + dx as usize)
+                    % self.cells_per_side;
+                let ny = (cy + self.cells_per_side + dy as usize)
+                    % self.cells_per_side;
+                cell_indices[i] = nx * self.cells_per_side + ny;
+                i += 1;
+            }
+        }
+
+        cell_indices
+            .into_iter()
+            .flat_map(move |idx| self.cells[idx].iter().copied())
     }
 
     fn cell_index(&self, pos: Position2D) -> usize {
-        todo!()
+        let cx = (pos.x / self.cell_size) as usize;
+        let cy = (pos.y / self.cell_size) as usize;
+        cx * self.cells_per_side + cy
     }
 }

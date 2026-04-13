@@ -1,11 +1,12 @@
 #import "@preview/lilaq:0.5.0" as lq
-#let data = json("../data/P4_1/timing.json")
+#let py_data = json("../data/P4_1/timing_python.json")
+#let rs_data = json("../data/P4_1/timing_rust.json")
 
 #set page(flipped: true)
 
 #show lq.selector(lq.diagram): set align(center + horizon)
-#show lq.selector(lq.title): set text(size: 18pt)
-#show lq.selector(lq.label): set text(size: 14pt)
+#show lq.selector(lq.title): set text(size: 16pt)
+#show lq.selector(lq.label): set text(size: 12pt)
 
 #let mean(arr) = arr.sum() / arr.len()
 #let std(arr) = {
@@ -14,53 +15,91 @@
   calc.sqrt(variance)
 }
 
-#let curve(ensemble) = {
-  let pts = data.points.filter(p => p.ensemble == ensemble)
-  let xs = pts.map(p => p.n_particles)
-  let ys = pts.map(p => mean(p.times_s))
-  let errs = pts.map(p => std(p.times_s))
+#let curves(data) = {
+  (("NVT", "NPT")).map(ensemble => {
+    let pts = data.points.filter(p => p.ensemble == ensemble)
+    let xs = pts.map(p => p.n_particles)
+    let ys = pts.map(p => mean(p.times_s))
+    let errs = pts.map(p => std(p.times_s))
+    lq.plot(
+      xs, ys,
+      yerr: errs,
+      mark: "o",
+      stroke: 1.5pt,
+      label: [#ensemble],
+    )
+  })
+}
+
+#let ref-line-n2(data) = {
+  let nvt = data.points.filter(p => p.ensemble == "NVT")
+  let xs = nvt.map(p => p.n_particles)
+  let t0 = mean(nvt.first().times_s)
+  let n0 = xs.first()
   lq.plot(
-    xs, ys,
-    yerr: errs,
-    mark: "o",
-    stroke: 1.5pt,
-    label: [#ensemble],
+    xs,
+    xs.map(n => t0 * calc.pow(n / n0, 2)),
+    mark: none,
+    stroke: (dash: "dashed", thickness: 1pt),
+    color: gray,
+    label: [$tilde N^2$],
+  )
+}
+
+#let ref-line-n(data) = {
+  let nvt = data.points.filter(p => p.ensemble == "NVT")
+  let xs = nvt.map(p => p.n_particles)
+  let t0 = mean(nvt.first().times_s)
+  let n0 = xs.first()
+  lq.plot(
+    xs,
+    xs.map(n => t0 * (n / n0)),
+    mark: none,
+    stroke: (dash: "dashed", thickness: 1pt),
+    color: gray,
+    label: [$tilde N$],
   )
 }
 
 #align(center)[#text(size: 20pt)[Kronberger\_P4\_1\_1a: MC Performance Scaling]]
 
-#figure(
-  box(
-    height: 85%,
-    lq.diagram(
-      title: [Simulation time vs. particle count],
-      width: 100%,
-      height: 100%,
-      xscale: "log",
-      yscale: "log",
-      xlabel: [$N$ (particles)],
-      ylabel: [time (s)],
-      legend: (position: top + left),
-      cycle: (lq.color.map.petroff6),
-      curve("NVT"),
-      curve("NPT"),
-      // N^2 reference line, anchored to NVT at N=36
-      {
-        let nvt = data.points.filter(p => p.ensemble == "NVT")
-        let xs = nvt.map(p => p.n_particles)
-        let t0 = mean(nvt.first().times_s)
-        let n0 = xs.first()
-        lq.plot(
-          xs,
-          xs.map(n => t0 * calc.pow(n / n0, 2)),
-          mark: none,
-          stroke: (dash: "dashed", thickness: 1pt),
-          color: gray,
-          label: [$tilde N^2$],
-        )
-      },
+#grid(
+  columns: (1fr, 1fr),
+  column-gutter: 1em,
+  figure(
+    box(
+      height: 85%,
+      lq.diagram(
+        title: [Python (no cell list)],
+        width: 100%,
+        height: 100%,
+        xscale: "log",
+        yscale: "log",
+        xlabel: [$N$ (particles)],
+        ylabel: [time (s)],
+        legend: (position: top + left),
+        cycle: (lq.color.map.petroff6),
+        ..curves(py_data),
+        ref-line-n2(py_data),
+      ),
     ),
+    caption: [Python O($N^2$) implementation],
   ),
-  caption: [Wall-clock time of MC simulations as a function of particle count $N$ at fixed density $N\/V = 0.5$ with $t_"end" = 200$ sweeps. Error bars show standard deviation over 5 runs.],
+  figure(
+    box(
+      height: 85%,
+      lq.diagram(
+        title: [Rust + cell list],
+        width: 100%,
+        height: 100%,
+        xlabel: [$N$ (particles)],
+        ylabel: [time (s)],
+        legend: (position: top + left),
+        cycle: (lq.color.map.petroff6),
+        ..curves(rs_data),
+        ref-line-n(rs_data),
+      ),
+    ),
+    caption: [Rust O($N$) with cell list optimization],
+  ),
 )

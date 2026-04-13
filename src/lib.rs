@@ -1,6 +1,7 @@
 pub mod mc;
 
 use std::fs::File;
+use std::io::Write;
 
 use serde::Serialize;
 
@@ -10,6 +11,14 @@ pub fn create_data_file(path: &str) -> File {
         std::fs::create_dir_all(parent).expect("failed to create parent dir")
     }
     std::fs::File::create(path).expect("failed to create output file")
+}
+
+/// Serialize `value` as pretty JSON to `path`, creating parent dirs as needed.
+pub fn write_json(path: &str, value: &impl Serialize) {
+    let mut file = create_data_file(path);
+    serde_json::to_writer_pretty(&mut file, value).unwrap();
+    writeln!(file).unwrap();
+    println!("Wrote {path}");
 }
 
 /// Analytical solution for diffusion with reflecting walls on [-L/2, +L/2].
