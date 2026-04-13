@@ -1,3 +1,5 @@
+pub mod mc;
+
 use std::fs::File;
 
 use serde::Serialize;
@@ -45,7 +47,12 @@ pub struct Histogram {
 }
 
 /// Bin positions into a histogram with a fixed range [lo, hi].
-pub fn histogram_fixed(positions: &[f64], n_bins: usize, lo: f64, hi: f64) -> Histogram {
+pub fn histogram_fixed(
+    positions: &[f64],
+    n_bins: usize,
+    lo: f64,
+    hi: f64,
+) -> Histogram {
     let bin_width = (hi - lo) / n_bins as f64;
     let mut counts = vec![0usize; n_bins];
 
@@ -102,4 +109,17 @@ pub fn analytical_reflecting_curves(
             }
         })
         .collect()
+}
+
+/// 2D Position convenience struct
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct Position2D {
+    pub x: f64,
+    pub y: f64,
+}
+
+impl Position2D {
+    pub fn new(x: f64, y: f64) -> Self {
+        Self { x, y }
+    }
 }
