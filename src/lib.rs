@@ -132,3 +132,17 @@ impl Position2D {
         Self { x, y }
     }
 }
+
+/// 2D Position convenience struct
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct Position3D {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
+
+impl Position3D {
+    pub fn new(x: f64, y: f64, z: f64) -> Self {
+        Self { x, y, z }
+    }
+}
