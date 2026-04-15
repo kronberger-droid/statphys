@@ -3,7 +3,6 @@
 # Usage: run P1_1a
 def main [name: string] {
   let typ = $"typst/Kronberger_($name).typ"
-  let pdf = ($"output/Kronberger_($name).pdf" | path expand)
 
   # Map exercise names to binary + subcommand
   let task = match $name {
@@ -18,6 +17,11 @@ def main [name: string] {
       { bin: $bin, sub: null }
     }
   }
+
+  # Derive output folder from exercise name (P4_1_1a -> P4_1, P1_1a -> P1, P4_2a -> P4_2)
+  let folder = $task.bin
+  let pdf = ($"output/($folder)/Kronberger_($name).pdf" | path expand)
+  mkdir $"output/($folder)"
 
   if $task.sub != null {
     print $"(ansi cyan)Building(ansi reset) cargo run --bin ($task.bin) -- ($task.sub)"
