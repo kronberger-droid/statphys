@@ -19,6 +19,7 @@
         with ps; [
           numpy
           matplotlib
+          scipy
         ]);
     in {
       default = pkgs.mkShell {
