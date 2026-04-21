@@ -29,14 +29,25 @@ def compute_L(phi: np.ndarray) -> float:
     return float(2 * np.pi / k_mean)
 
 
+def _minority_phase_from_mean(phi_mean: float) -> str:
+    """Sign of the minority phase: if <phi> < 0, minority is positive, and vice versa."""
+    return "positive" if phi_mean <= 0.0 else "negative"
+
+
 def cluster_stats(
     phi: np.ndarray,
     threshold: float = 0.1,
-    phase: str = "negative",
+    phase: str = "auto",
     connectivity: int = 1,
 ) -> int:
-    """Size (in cells) of the largest connected minority-phase cluster."""
-    mask = phi < -threshold if phase == "negative" else phi > threshold
+    """Size (in cells) of the largest connected minority-phase cluster.
+
+    phase="auto" picks the minority sign from the mean of phi; pass "positive"
+    or "negative" to override.
+    """
+    if phase == "auto":
+        phase = _minority_phase_from_mean(float(phi.mean()))
+    mask = phi > threshold if phase == "positive" else phi < -threshold
     structure = ndimage.generate_binary_structure(2, connectivity)
     labeled, ncomp = ndimage.label(mask, structure=structure)
     if ncomp == 0:
@@ -46,8 +57,16 @@ def cluster_stats(
     return int(sizes.max())
 
 
-def minority_cell_count(phi: np.ndarray, threshold: float = 0.1) -> int:
-    """P3(b): total cells with phi < -threshold (minority-phase volume)."""
+def minority_cell_count(
+    phi: np.ndarray,
+    threshold: float = 0.1,
+    phase: str = "auto",
+) -> int:
+    """P3(b): total cells whose phi sits on the minority side of threshold."""
+    if phase == "auto":
+        phase = _minority_phase_from_mean(float(phi.mean()))
+    if phase == "positive":
+        return int(np.sum(phi > threshold))
     return int(np.sum(phi < -threshold))
 
 
@@ -55,12 +74,29 @@ def compute_L_series(history: dict) -> list[float]:
     return [compute_L(np.asarray(p)) for p in history["phi"]]
 
 
+def _resolve_minority_phase(history: dict) -> str:
+    means = history.get("phi_mean")
+    if means:
+        return _minority_phase_from_mean(float(np.mean(means)))
+    return _minority_phase_from_mean(float(np.asarray(history["phi"][0]).mean()))
+
+
 def largest_cluster_series(history: dict, **kwargs) -> list[int]:
+    kwargs.setdefault("phase", _resolve_minority_phase(history))
     return [cluster_stats(np.asarray(p), **kwargs) for p in history["phi"]]
 
 
-def minority_count_series(history: dict, threshold: float | None = None) -> list[int]:
-    """If threshold is None, use phi_binodal(T) from the history dict."""
+def minority_count_series(
+    history: dict,
+    threshold: float | None = None,
+    phase: str | None = None,
+) -> list[int]:
+    """If threshold is None, use phi_binodal(T) from the history dict.
+
+    phase defaults to whichever side of zero the mean phi sits opposite to.
+    """
     if threshold is None:
         threshold = float(history["phi_binodal"])
-    return [minority_cell_count(np.asarray(p), threshold) for p in history["phi"]]
+    if phase is None:
+        phase = _resolve_minority_phase(history)
+    return [minority_cell_count(np.asarray(p), threshold, phase) for p in history["phi"]]
