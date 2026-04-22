@@ -7,6 +7,8 @@
 #[cfg(feature = "python-backend")]
 mod python;
 
+use std::fmt;
+
 use clap::{Parser, ValueEnum};
 use serde::Serialize;
 use statphys::Position2D;
@@ -27,7 +29,8 @@ struct Cli {
     temperature: f64,
     #[arg(long, default_value_t = 5.0)]
     box_length: f64,
-    #[arg(long)]
+    /// Required when --ensemble npt.
+    #[arg(long, required_if_eq("ensemble", "npt"))]
     pressure: Option<f64>,
     #[arg(long, default_value_t = 1.0)]
     sigma: f64,
@@ -44,10 +47,12 @@ struct Cli {
     save_every: usize,
     #[arg(long, default_value_t = 0)]
     seed: u64,
+    /// Only `square` is supported by the Rust backend; `random` requires `--backend python`.
     #[arg(long, default_value = "square")]
     initialization: InitArg,
-    #[arg(long)]
-    output: Option<String>,
+    /// Output JSON path. `-` streams to stdout (compact JSON); omit to stream to stdout.
+    #[arg(long, default_value = "-")]
+    output: String,
 
     #[arg(long, default_value = "rust")]
     backend: Backend,
@@ -72,6 +77,24 @@ pub enum InitArg {
     Random,
 }
 
+impl fmt::Display for EnsembleArg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            EnsembleArg::Nvt => "NVT",
+            EnsembleArg::Npt => "NPT",
+        })
+    }
+}
+
+impl fmt::Display for InitArg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            InitArg::Square => "square",
+            InitArg::Random => "random",
+        })
+    }
+}
+
 /// Output schema matching `hard_disks_mc.MonteCarloResult` (positions as `[x,y]`
 /// tuples rather than `{x, y}` objects, to match the NumPy-array serialization
 /// the Python reference produces).
@@ -91,16 +114,15 @@ fn to_pairs(ps: &[Position2D]) -> Vec<[f64; 2]> {
     ps.iter().map(|p| [p.x, p.y]).collect()
 }
 
-fn run_rust(cli: &Cli) -> SimulationResult {
+fn run_rust(cli: &Cli) -> Result<SimulationResult, Box<dyn std::error::Error>> {
     let ensemble = match cli.ensemble {
         EnsembleArg::Nvt => Ensemble::Nvt,
         EnsembleArg::Npt => Ensemble::Npt,
     };
-    if cli.ensemble == EnsembleArg::Npt && cli.pressure.is_none() {
-        panic!("--pressure is required for --ensemble npt");
-    }
     if cli.initialization == InitArg::Random {
-        panic!("--initialization random is not yet supported by the Rust backend; use `square`");
+        return Err(
+            "--initialization random is not supported by the Rust backend; use --backend python".into(),
+        );
     }
 
     let mut sim = MonteCarloSystem::new(
@@ -133,7 +155,7 @@ fn run_rust(cli: &Cli) -> SimulationResult {
         "include_initial": true,
     });
 
-    SimulationResult {
+    Ok(SimulationResult {
         positions: to_pairs(&result.positions),
         trajectory: result.trajectory.iter().map(|frame| to_pairs(frame)).collect(),
         box_lengths: result.box_lengths,
@@ -142,26 +164,16 @@ fn run_rust(cli: &Cli) -> SimulationResult {
         move_acceptance: result.move_acceptance,
         volume_acceptance: result.volume_acceptance,
         metadata,
-    }
-}
-
-fn default_output_path(cli: &Cli) -> String {
-    let tag = match cli.backend {
-        Backend::Rust => "rust",
-        #[cfg(feature = "python-backend")]
-        Backend::Python => "python",
-    };
-    format!("data/hard_disks_mc/run_{tag}.json")
+    })
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
-    let out_path = cli.output.clone().unwrap_or_else(|| default_output_path(&cli));
 
     let result = match cli.backend {
         Backend::Rust => {
             eprintln!("=== hard-disks MC (Rust) ===");
-            run_rust(&cli)
+            run_rust(&cli)?
         }
         #[cfg(feature = "python-backend")]
         Backend::Python => {
@@ -169,6 +181,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             python::run(&cli)?
         }
     };
-    write_json(&out_path, &result);
+    write_json(&cli.output, &result);
     Ok(())
 }

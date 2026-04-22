@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-use super::{Cli, EnsembleArg, InitArg, SimulationResult};
+use super::{Cli, SimulationResult};
 
 pub fn run(cli: &Cli) -> PyResult<SimulationResult> {
     Python::with_gil(|py| {
@@ -22,22 +22,10 @@ pub fn run(cli: &Cli) -> PyResult<SimulationResult> {
         kwargs.set_item("epsilon", cli.epsilon)?;
         kwargs.set_item("max_displacement", cli.max_displacement)?;
         kwargs.set_item("max_delta_log_area", cli.max_delta_log_area)?;
-        kwargs.set_item(
-            "ensemble",
-            match cli.ensemble {
-                EnsembleArg::Nvt => "NVT",
-                EnsembleArg::Npt => "NPT",
-            },
-        )?;
+        kwargs.set_item("ensemble", cli.ensemble.to_string())?;
         kwargs.set_item("save_every", cli.save_every)?;
         kwargs.set_item("seed", cli.seed)?;
-        kwargs.set_item(
-            "initialization",
-            match cli.initialization {
-                InitArg::Square => "square",
-                InitArg::Random => "random",
-            },
-        )?;
+        kwargs.set_item("initialization", cli.initialization.to_string())?;
 
         let result = hsmc.call_method("run_simulation", (), Some(&kwargs))?;
 

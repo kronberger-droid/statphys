@@ -14,14 +14,15 @@ pub fn create_data_file(path: &str) -> File {
     std::fs::File::create(path).expect("failed to create output file")
 }
 
-/// Serialize `value` as pretty JSON to `path`, creating parent dirs as needed.
-/// The special path `"-"` writes to stdout instead (and suppresses the
-/// "Wrote ..." progress line) so callers can pipe directly into `json.load`.
+/// Serialize `value` as JSON to `path`, creating parent dirs as needed.
+/// The special path `"-"` writes compact JSON to stdout (files get pretty JSON
+/// for readability; stdout is assumed to be piped into `json.load`, where
+/// pretty-printing only doubles bytes and parse time).
 pub fn write_json(path: &str, value: &impl Serialize) {
     if path == "-" {
         let stdout = std::io::stdout();
         let mut handle = stdout.lock();
-        serde_json::to_writer_pretty(&mut handle, value).unwrap();
+        serde_json::to_writer(&mut handle, value).unwrap();
         writeln!(handle).unwrap();
         return;
     }

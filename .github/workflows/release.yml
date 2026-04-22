@@ -45,10 +45,9 @@ jobs:
       - name: Build binaries
         shell: bash
         run: |
-          for bin in binary_lb hard_disks_mc; do
-            cargo build --profile release-dist --no-default-features \
-                        --target ${{ matrix.target }} --bin "$bin"
-          done
+          cargo build --profile release-dist --no-default-features \
+                      --target ${{ matrix.target }} \
+                      --bin binary_lb --bin hard_disks_mc
 
       - name: Stage artifacts
         shell: bash

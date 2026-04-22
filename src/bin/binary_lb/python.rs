@@ -76,11 +76,7 @@ fn spinodal(py: Python<'_>, args: &SpinodalArgs) -> PyResult<()> {
     kwargs.set_item("seed", args.seed)?;
     let sim = call_ctor(&lb, "make_spinodal_example", &kwargs)?;
     let history = call_run_and_collect(&lb, &sim, args.steps, args.snapshot_every)?;
-    let out_path = args
-        .output
-        .clone()
-        .unwrap_or_else(|| "data/binary_lb/spinodal_python.json".to_string());
-    dump_history(&history, &out_path)
+    dump_history(&history, &args.output)
 }
 
 fn metastable(py: Python<'_>, args: &MetastableArgs) -> PyResult<()> {
@@ -102,11 +98,7 @@ fn metastable(py: Python<'_>, args: &MetastableArgs) -> PyResult<()> {
     kwargs.set_item("seed", args.seed)?;
     let sim = call_ctor(&lb, "make_metastable_example", &kwargs)?;
     let history = call_run_and_collect(&lb, &sim, args.steps, args.snapshot_every)?;
-    let out_path = args
-        .output
-        .clone()
-        .unwrap_or_else(|| "data/binary_lb/metastable_python.json".to_string());
-    dump_history(&history, &out_path)
+    dump_history(&history, &args.output)
 }
 
 pub fn run(task: &Task) -> PyResult<()> {

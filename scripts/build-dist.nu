@@ -1,10 +1,11 @@
 # Build a standalone (no libpython) release of a statphys binary.
 #
 # Usage:
-#   nu scripts/build-dist.nu P5_1          # dynamic libc, requires glibc compat
-#   nu scripts/build-dist.nu P5_1 --musl   # fully static, runs on any Linux
+#   nu scripts/build-dist.nu binary_lb          # dynamic libc, requires glibc compat
+#   nu scripts/build-dist.nu binary_lb --musl   # fully static, runs on any Linux
+#   nu scripts/build-dist.nu hard_disks_mc --musl
 def main [
-  binary: string          # e.g. "P5_1" or "P4_1"
+  binary: string          # e.g. "binary_lb" or "hard_disks_mc"
   --musl                  # produce a fully-static musl build
   --out-dir: string = "dist"
 ] {

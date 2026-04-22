@@ -145,22 +145,6 @@ pub struct NucleationOutput {
     pub curves: Vec<NucleationCurve>,
 }
 
-/// JSON schema matching the history dict returned by `binary_LB.run_and_collect`.
-/// Velocity fields are omitted (not needed by the current analysis pipeline);
-/// add them if a downstream plot needs them.
-#[derive(Serialize)]
-pub struct RunHistory {
-    pub times: Vec<f64>,
-    pub steps: Vec<usize>,
-    pub phi: Vec<Vec<Vec<f64>>>,
-    pub phi_mean: Vec<f64>,
-    pub params: serde_json::Value,
-    #[serde(rename = "Tc")]
-    pub tc: f64,
-    pub phi_binodal: f64,
-    pub phi_spinodal: f64,
-}
-
 // --- Entrypoint -----------------------------------------------------------
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

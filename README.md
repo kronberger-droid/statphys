@@ -123,9 +123,18 @@ from pathlib import Path
 LB_BIN   = Path("./binary_lb")
 HDMC_BIN = Path("./hard_disks_mc")
 
+# CLI flags the binaries expose as presence-only switches (default off).
+# When a user passes `--no-hydrodynamics` / `hydrodynamics=False`, we still
+# want the flag emitted, so these are normalized to `no_<name>` below.
+_INVERTED_BOOL_FLAGS = {"hydrodynamics"}
+
 def _call(argv, **kwargs):
     args = list(argv) + ["--output", "-"]
     for k, v in kwargs.items():
+        if k in _INVERTED_BOOL_FLAGS:           # hydrodynamics=False → --no-hydrodynamics
+            if not v:
+                args.append(f"--no-{k.replace('_', '-')}")
+            continue
         flag = "--" + k.replace("_", "-")
         if isinstance(v, bool):
             if v:

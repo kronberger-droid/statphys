@@ -45,6 +45,15 @@ pub enum Precision {
     F64,
 }
 
+impl std::fmt::Display for Precision {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Precision::F32 => "f32",
+            Precision::F64 => "f64",
+        })
+    }
+}
+
 #[derive(Subcommand)]
 pub enum Task {
     /// Single run from a spinodal quench.
@@ -97,8 +106,9 @@ pub struct SpinodalArgs {
     pub steps: usize,
     #[arg(long, default_value_t = 20)]
     pub snapshot_every: usize,
-    #[arg(long)]
-    pub output: Option<String>,
+    /// Output JSON path. `-` (default) streams compact JSON to stdout.
+    #[arg(long, default_value = "-")]
+    pub output: String,
 }
 
 #[derive(clap::Args, Clone)]
@@ -136,8 +146,9 @@ pub struct MetastableArgs {
     pub steps: usize,
     #[arg(long, default_value_t = 20)]
     pub snapshot_every: usize,
-    #[arg(long)]
-    pub output: Option<String>,
+    /// Output JSON path. `-` (default) streams compact JSON to stdout.
+    #[arg(long, default_value = "-")]
+    pub output: String,
 }
 
 impl SpinodalArgs {
@@ -181,45 +192,42 @@ impl MetastableArgs {
     }
 }
 
-fn precision_label(p: Precision) -> &'static str {
-    match p {
-        Precision::F32 => "f32",
-        Precision::F64 => "f64",
+fn run_case<R, C>(cfg: C, steps: usize, snapshot_every: usize, out_path: &str, precision: Precision)
+where
+    R: Real,
+    StandardNormal: rand_distr::Distribution<R>,
+    C: CaseConfig<R>,
+{
+    let params = cfg.to_params();
+    let mut extras = cfg.metadata(params.phi0);
+    if let Some(m) = extras.as_object_mut() {
+        m.insert("precision".into(), precision.to_string().into());
+    }
+    let history = run_and_collect::<R>(params, steps, snapshot_every, extras);
+    write_json(out_path, &history);
+}
+
+trait CaseConfig<R: Real> {
+    fn to_params(&self) -> FluidParams;
+    fn metadata(&self, phi0: f64) -> serde_json::Value;
+}
+
+impl<R: Real> CaseConfig<R> for SpinodalConfig {
+    fn to_params(&self) -> FluidParams {
+        SpinodalConfig::to_params::<R>(self)
+    }
+    fn metadata(&self, phi0: f64) -> serde_json::Value {
+        SpinodalConfig::metadata(self, phi0)
     }
 }
 
-fn run_spinodal<R: Real>(args: &SpinodalArgs, precision: Precision)
-where
-    StandardNormal: rand_distr::Distribution<R>,
-{
-    let cfg = args.to_config();
-    let params = cfg.to_params::<R>();
-    let mut extras = cfg.metadata(params.phi0);
-    if let Some(m) = extras.as_object_mut() {
-        m.insert("precision".into(), precision_label(precision).into());
+impl<R: Real> CaseConfig<R> for MetastableConfig {
+    fn to_params(&self) -> FluidParams {
+        MetastableConfig::to_params::<R>(self)
     }
-    let history = run_and_collect::<R>(params, args.steps, args.snapshot_every, extras);
-    let out_path = args.output.clone().unwrap_or_else(|| {
-        format!("data/binary_lb/spinodal_{}.json", precision_label(precision))
-    });
-    write_json(&out_path, &history);
-}
-
-fn run_metastable<R: Real>(args: &MetastableArgs, precision: Precision)
-where
-    StandardNormal: rand_distr::Distribution<R>,
-{
-    let cfg = args.to_config();
-    let params = cfg.to_params::<R>();
-    let mut extras = cfg.metadata(params.phi0);
-    if let Some(m) = extras.as_object_mut() {
-        m.insert("precision".into(), precision_label(precision).into());
+    fn metadata(&self, phi0: f64) -> serde_json::Value {
+        MetastableConfig::metadata(self, phi0)
     }
-    let history = run_and_collect::<R>(params, args.steps, args.snapshot_every, extras);
-    let out_path = args.output.clone().unwrap_or_else(|| {
-        format!("data/binary_lb/metastable_{}.json", precision_label(precision))
-    });
-    write_json(&out_path, &history);
 }
 
 fn run_bench<R: Real>(nx: usize, ny: usize, steps: usize, label: &str)
@@ -245,17 +253,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match cli.backend {
         Backend::Rust => match &cli.task {
             Task::Spinodal(args) => {
-                eprintln!("=== Spinodal (Rust, {:?}) ===", cli.precision);
+                eprintln!("=== Spinodal (Rust, {}) ===", cli.precision);
+                let cfg = args.to_config();
                 match cli.precision {
-                    Precision::F32 => run_spinodal::<f32>(args, cli.precision),
-                    Precision::F64 => run_spinodal::<f64>(args, cli.precision),
+                    Precision::F32 => run_case::<f32, _>(
+                        cfg, args.steps, args.snapshot_every, &args.output, cli.precision,
+                    ),
+                    Precision::F64 => run_case::<f64, _>(
+                        cfg, args.steps, args.snapshot_every, &args.output, cli.precision,
+                    ),
                 }
             }
             Task::Metastable(args) => {
-                eprintln!("=== Metastable (Rust, {:?}) ===", cli.precision);
+                eprintln!("=== Metastable (Rust, {}) ===", cli.precision);
+                let cfg = args.to_config();
                 match cli.precision {
-                    Precision::F32 => run_metastable::<f32>(args, cli.precision),
-                    Precision::F64 => run_metastable::<f64>(args, cli.precision),
+                    Precision::F32 => run_case::<f32, _>(
+                        cfg, args.steps, args.snapshot_every, &args.output, cli.precision,
+                    ),
+                    Precision::F64 => run_case::<f64, _>(
+                        cfg, args.steps, args.snapshot_every, &args.output, cli.precision,
+                    ),
                 }
             }
             Task::Bench { nx, ny, steps } => {
