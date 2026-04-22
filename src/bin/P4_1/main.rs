@@ -1,3 +1,4 @@
+#[cfg(feature = "python-backend")]
 mod python;
 
 use clap::{Parser, Subcommand, ValueEnum};
@@ -19,6 +20,7 @@ struct Cli {
 #[derive(Clone, Copy, ValueEnum)]
 enum Backend {
     Rust,
+    #[cfg(feature = "python-backend")]
     Python,
 }
 
@@ -318,7 +320,7 @@ fn henderson_rust() {
     write_json("data/P4_1/henderson_rust.json", &output);
 }
 
-fn main() -> pyo3::PyResult<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     match cli.backend {
@@ -353,6 +355,7 @@ fn main() -> pyo3::PyResult<()> {
             }
             Ok(())
         }
-        Backend::Python => python::run_tasks(&cli.task),
+        #[cfg(feature = "python-backend")]
+        Backend::Python => python::run_tasks(&cli.task).map_err(Into::into),
     }
 }

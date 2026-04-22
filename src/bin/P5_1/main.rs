@@ -1,6 +1,8 @@
+#[cfg(feature = "python-backend")]
 mod python;
+mod rust;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use serde::Serialize;
 
 #[derive(Parser)]
@@ -8,8 +10,32 @@ use serde::Serialize;
 struct Cli {
     #[command(subcommand)]
     task: Task,
+
+    /// Simulation backend
+    #[arg(long, default_value = "rust", global = true)]
+    backend: Backend,
+
+    /// Floating-point precision (Rust backend only)
+    #[arg(long, default_value = "f64", global = true)]
+    precision: Precision,
 }
 
+#[derive(Clone, Copy, ValueEnum)]
+pub enum Backend {
+    Rust,
+    #[cfg(feature = "python-backend")]
+    Python,
+}
+
+#[derive(Clone, Copy, ValueEnum, PartialEq, Eq, Debug)]
+pub enum Precision {
+    F32,
+    F64,
+}
+
+/// Exercise-5 preset tasks. For general-purpose single runs, use the separate
+/// `binary_lb` binary which exposes the full `make_{spinodal,metastable}_example`
+/// surface.
 #[derive(Subcommand)]
 pub enum Task {
     /// 1a: Symmetric run, temperature sweep (save final phi snapshots)
@@ -24,7 +50,16 @@ pub enum Task {
     Nucleation,
     /// 3b: Minority-cell count for the same three runs
     MinorityCount,
-    /// Run everything
+    /// Micro-benchmark: Nx × Ny grid × steps, report ms/step
+    Bench {
+        #[arg(long, default_value_t = 128)]
+        nx: usize,
+        #[arg(long, default_value_t = 128)]
+        ny: usize,
+        #[arg(long, default_value_t = 500)]
+        steps: usize,
+    },
+    /// Run every preset
     All,
 }
 
@@ -110,9 +145,30 @@ pub struct NucleationOutput {
     pub curves: Vec<NucleationCurve>,
 }
 
+/// JSON schema matching the history dict returned by `binary_LB.run_and_collect`.
+/// Velocity fields are omitted (not needed by the current analysis pipeline);
+/// add them if a downstream plot needs them.
+#[derive(Serialize)]
+pub struct RunHistory {
+    pub times: Vec<f64>,
+    pub steps: Vec<usize>,
+    pub phi: Vec<Vec<Vec<f64>>>,
+    pub phi_mean: Vec<f64>,
+    pub params: serde_json::Value,
+    #[serde(rename = "Tc")]
+    pub tc: f64,
+    pub phi_binodal: f64,
+    pub phi_spinodal: f64,
+}
+
 // --- Entrypoint -----------------------------------------------------------
 
-fn main() -> pyo3::PyResult<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
-    python::run_tasks(&cli.task)
+
+    match cli.backend {
+        Backend::Rust => rust::run_tasks(&cli.task, cli.precision),
+        #[cfg(feature = "python-backend")]
+        Backend::Python => python::run_tasks(&cli.task).map_err(Into::into),
+    }
 }

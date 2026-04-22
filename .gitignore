@@ -1,4 +1,6 @@
 /target
 /data
 /output
+/dist
 __pycache__
+.claude/

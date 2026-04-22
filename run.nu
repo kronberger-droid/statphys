@@ -5,16 +5,23 @@ def main [name: string] {
   let typ = $"typst/Kronberger_($name).typ"
 
   # Map exercise names to binary + subcommand
+  # both_backends: run with --backend python in addition to the default rust
   let task = match $name {
-    "P4_1_1a" => { bin: "P4_1", sub: "timing" }
-    "P4_1_1b" => { bin: "P4_1", sub: "acceptance" }
-    "P4_1_2a" => { bin: "P4_1", sub: "packing" }
-    "P4_1_2b" => { bin: "P4_1", sub: "henderson" }
-    "P4_2a"   => { bin: "P4_2", sub: "energy" }
-    "P4_2b"   => { bin: "P4_2", sub: "rdf" }
+    "P4_1_1a" => { bin: "P4_1", sub: "timing",     both_backends: true }
+    "P4_1_1b" => { bin: "P4_1", sub: "acceptance",  both_backends: false }
+    "P4_1_2a" => { bin: "P4_1", sub: "packing",     both_backends: false }
+    "P4_1_2b" => { bin: "P4_1", sub: "henderson",   both_backends: true }
+    "P4_2a"   => { bin: "P4_2", sub: "energy",      both_backends: false }
+    "P4_2b"   => { bin: "P4_2", sub: "rdf",         both_backends: false }
+    "P5_1a"   => { bin: "P5_1", sub: "temperatures",  both_backends: false }
+    "P5_1b"   => { bin: "P5_1", sub: "timesteps",     both_backends: false }
+    "P5_1c"   => { bin: "P5_1", sub: "asymmetric",    both_backends: false }
+    "P5_2a"   => { bin: "P5_1", sub: "domain-growth", both_backends: false }
+    "P5_3a"   => { bin: "P5_1", sub: "nucleation",    both_backends: false }
+    "P5_3b"   => { bin: "P5_1", sub: "minority-count", both_backends: false }
     _ => {
       let bin = $name | str replace -r '[a-z]$' ''
-      { bin: $bin, sub: null }
+      { bin: $bin, sub: null, both_backends: false }
     }
   }
 
@@ -26,6 +33,10 @@ def main [name: string] {
   if $task.sub != null {
     print $"(ansi cyan)Building(ansi reset) cargo run --bin ($task.bin) -- ($task.sub)"
     cargo run --release --bin $task.bin -- $task.sub
+    if $task.both_backends {
+      print $"(ansi cyan)Building(ansi reset) cargo run --bin ($task.bin) -- ($task.sub) --backend python"
+      cargo run --release --bin $task.bin -- $task.sub --backend python
+    }
   } else {
     print $"(ansi cyan)Building(ansi reset) cargo run --bin ($task.bin)"
     cargo run --release --bin $task.bin

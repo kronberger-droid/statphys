@@ -8,7 +8,20 @@ use statphys::write_json;
 
 struct Bridge<'py> {
     lb: Bound<'py, PyModule>,
-    analysis: Bound<'py, PyModule>,
+    analysis: std::cell::OnceCell<Bound<'py, PyModule>>,
+}
+
+impl<'py> Bridge<'py> {
+    /// Lazy-loaded `analysis` module. Not every task needs scipy/analysis, so
+    /// don't pay the import cost (and scipy dependency) until the first caller asks.
+    fn analysis(&self) -> PyResult<&Bound<'py, PyModule>> {
+        if let Some(m) = self.analysis.get() {
+            return Ok(m);
+        }
+        let m = self.lb.py().import("analysis")?;
+        let _ = self.analysis.set(m);
+        Ok(self.analysis.get().unwrap())
+    }
 }
 
 fn setup<'py>(py: Python<'py>) -> PyResult<Bridge<'py>> {
@@ -17,7 +30,7 @@ fn setup<'py>(py: Python<'py>) -> PyResult<Bridge<'py>> {
         .call_method1("insert", (0, "exercises/exercise-5"))?;
     Ok(Bridge {
         lb: py.import("binary_LB")?,
-        analysis: py.import("analysis")?,
+        analysis: std::cell::OnceCell::new(),
     })
 }
 
@@ -186,9 +199,7 @@ fn domain_growth(bridge: &Bridge<'_>) -> PyResult<()> {
         let sim = call_make_spinodal(bridge, &kwargs)?;
         let history = run_and_collect(bridge, &sim, TASK2_STEPS, SNAPSHOT_EVERY, true)?;
 
-        let l_of_t: Vec<f64> = bridge
-            .analysis
-            .call_method1("compute_L_series", (&history,))?
+        let l_of_t: Vec<f64> = bridge.analysis()?.call_method1("compute_L_series", (&history,))?
             .extract()?;
         let times = extract_times(&history)?;
 
@@ -226,13 +237,9 @@ fn nucleation(bridge: &Bridge<'_>) -> PyResult<()> {
         let sim = call_make_metastable(bridge, &kwargs)?;
         let history = run_and_collect(bridge, &sim, TASK3_STEPS, SNAPSHOT_EVERY, false)?;
 
-        let largest: Vec<i64> = bridge
-            .analysis
-            .call_method1("largest_cluster_series", (&history,))?
+        let largest: Vec<i64> = bridge.analysis()?.call_method1("largest_cluster_series", (&history,))?
             .extract()?;
-        let minority: Vec<i64> = bridge
-            .analysis
-            .call_method1("minority_count_series", (&history,))?
+        let minority: Vec<i64> = bridge.analysis()?.call_method1("minority_count_series", (&history,))?
             .extract()?;
         let threshold: f64 = history.get_item("phi_binodal")?.extract()?;
         let times = extract_times(&history)?;
@@ -283,6 +290,11 @@ pub fn run_tasks(task: &Task) -> PyResult<()> {
                 // 3a and 3b share the same runs; we always compute both.
                 println!("=== Task 3: Nucleation vs spinodal ===");
                 nucleation(&bridge)?;
+            }
+            Task::Bench { .. } => {
+                return Err(pyo3::exceptions::PyRuntimeError::new_err(
+                    "Bench is only supported by the Rust backend",
+                ));
             }
             Task::All => {
                 println!("=== Task 1a ===");

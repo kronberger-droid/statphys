@@ -1,5 +1,5 @@
 #import "@preview/lilaq:0.5.0" as lq
-#let data = json("../data/P4_1/packing.json")
+#let data = json("../data/P4_1/packing_rust.json")
 
 #set page(flipped: true)
 
