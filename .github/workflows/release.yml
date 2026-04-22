@@ -1,0 +1,102 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            ext: ""
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            ext: ""
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            ext: ""
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            ext: ".exe"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install musl tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build binaries
+        shell: bash
+        run: |
+          for bin in binary_lb P4_1 P4_2 P5_1; do
+            cargo build --profile release-dist --no-default-features \
+                        --target ${{ matrix.target }} --bin "$bin"
+          done
+
+      - name: Stage artifacts
+        shell: bash
+        run: |
+          mkdir -p dist
+          for bin in binary_lb P4_1 P4_2 P5_1; do
+            src="target/${{ matrix.target }}/release-dist/${bin}${{ matrix.ext }}"
+            dst="dist/${bin}-${{ matrix.target }}${{ matrix.ext }}"
+            cp "$src" "$dst"
+          done
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*
+
+  release:
+    name: publish release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifact tree
+        run: |
+          mkdir -p release
+          find artifacts -type f -exec cp {} release/ \;
+          ls -la release
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          body: |
+            Multi-platform Rust binaries for TU Wien Statistical Physics 2 exercises 4 and 5.
+
+            - `binary_lb-*` — general-purpose binary-fluid LB CLI (drop-in replacement for `binary_LB.py`).
+            - `P4_1-*`, `P4_2-*` — exercise-4 Monte Carlo hard-disks tasks.
+            - `P5_1-*` — exercise-5 LB presets.
+
+            See `DISTRIBUTING.md` in the repo for usage. All binaries are standalone;
+            no Python or libpython install required to run them.
+          generate_release_notes: true

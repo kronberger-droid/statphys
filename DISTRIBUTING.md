@@ -81,29 +81,29 @@ libm.
 
 ## Publishing via GitHub Releases
 
-1. **Push to GitHub.** The repo is already a git repo; add a remote and push:
-   ```sh
-   git remote add origin git@github.com:<user>/statphys.git
-   git push -u origin main
-   ```
-2. **Tag a release locally**:
-   ```sh
-   git tag -a v0.1.0 -m "Exercise 4 + 5 Rust ports"
-   git push origin v0.1.0
-   ```
-3. **Build release artifacts** and attach them via the GitHub web UI or `gh`:
-   ```sh
-   mkdir -p dist
-   for bin in binary_lb P4_1 P4_2 P5_1; do
-     nu scripts/build-dist.nu $bin --musl
-   done
-   gh release create v0.1.0 dist/binary_lb dist/P4_1 dist/P4_2 dist/P5_1 \
-     --title "v0.1.0" \
-     --notes "Rust ports of exercise 4 (Monte Carlo hard disks) and 5 (binary-fluid LB)."
-   ```
-4. **Automate with CI** (optional). A `.github/workflows/release.yml` that triggers
-   on version tags and runs the musl cross-build will produce the same artifacts
-   on every tag. Not required for the first release.
+The repo ships a workflow at `.github/workflows/release.yml` that builds
+standalone binaries for Linux (musl), macOS (x86_64 + arm64), and Windows on
+every `v*` tag push, then creates a GitHub Release with the artifacts attached.
+
+```sh
+git remote add origin git@github.com:<user>/statphys.git
+git push -u origin main
+
+git tag -a v0.1.0 -m "Exercise 4 + 5 Rust ports"
+git push origin v0.1.0            # triggers the release workflow
+```
+
+You can also trigger it manually from the Actions tab via `workflow_dispatch`.
+
+Output artifacts are named `<bin>-<target>[.exe]`, e.g.
+`binary_lb-x86_64-unknown-linux-musl` or `P5_1-x86_64-pc-windows-msvc.exe`.
+Colleagues download the binary for their platform and run it directly.
+
+For a local-only build (no CI), see `scripts/build-dist.nu`:
+
+```nu
+nu scripts/build-dist.nu binary_lb --musl    # fully static, single file
+```
 
 ## For colleagues — running a downloaded binary
 
