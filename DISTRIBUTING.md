@@ -1,33 +1,42 @@
-# Publishing the optimized Rust binaries
+# Publishing the Rust binaries
 
-This document is for colleagues who want to run the Rust ports of the statistical-physics
-exercise reference implementations without installing the full toolchain. It covers
-what's provided, how to build standalone binaries, and how to ship them via GitHub
-Releases.
+This document is for colleagues who want to run the Rust ports of the
+TU Wien Statistical Physics 2 reference simulations without installing
+the Python toolchain. It covers what's shipped, how to build standalone
+binaries, and how to publish them via GitHub Releases.
 
 ## Goal
 
-Two of the TU Wien Statistical Physics 2 exercise sheets ship Python reference
-implementations that become the bottleneck for long runs:
+Two Python reference implementations are the bottleneck for long runs.
+Each one gets its own drop-in Rust binary:
 
-| Exercise | Python reference | Rust port |
-|---|---|---|
-| 4 — Monte Carlo hard disks (NVT / NPT) | `exercises/exercise-4/MC/hard_disks_mc.py` | `src/mc/` + `src/bin/P4_1`, `src/bin/P4_2` |
-| 5 — Binary-fluid lattice Boltzmann | `exercises/exercise-5/binary_LB.py` | `src/lb/` + `src/bin/binary_lb`, `src/bin/P5_1` |
+| Python reference | Rust binary |
+|---|---|
+| `exercises/exercise-4/MC/hard_disks_mc.py::run_simulation` | `hard_disks_mc` |
+| `exercises/exercise-5/binary_LB.py::make_spinodal_example` + `run_and_collect` | `binary_lb` |
 
-The Rust ports preserve the Python calling conventions (parameter names, output
-schema) so switching from `import binary_LB` to the Rust binary only requires
-changing the invocation, not the analysis pipeline.
+Same parameter names, same output JSON schema — existing analysis
+notebooks keep working after swapping `subprocess.run(["./hard_disks_mc", ...])`
+for the Python call.
 
-## CLI surface parity
+## CLI surface
 
-### Exercise 4 (`P4_1`, `P4_2`)
-Matches the exercise-sheet tasks. Pick a subcommand (`timing`, `acceptance`,
-`packing`, `henderson`, …) and optionally `--backend python` to run the Python
-reference instead of the Rust implementation — useful for parity checks.
+### `hard_disks_mc` — 2D hard-disk MC (NVT / NPT)
 
-### Exercise 5 — general-purpose (`binary_lb`)
-Drop-in replacement for `binary_LB.make_spinodal_example` + `run_and_collect`:
+```
+hard_disks_mc [--n-particles --t-end --temperature --box-length --pressure
+               --sigma --epsilon --max-displacement --max-delta-log-area
+               --ensemble {nvt,npt} --save-every --seed
+               --initialization {square,random} --output]
+```
+
+Parameter names mirror `hard_disks_mc.run_simulation` (only `max_delta_log_volume`
+→ `--max-delta-log-area` to match the more common 2D naming).
+Output schema matches the `MonteCarloResult` dataclass: `positions`,
+`trajectory`, `box_lengths`, `energies`, `saved_sweeps`, `move_acceptance`,
+`volume_acceptance`, `metadata`.
+
+### `binary_lb` — binary-fluid lattice Boltzmann
 
 ```
 binary_lb spinodal   [--nx --ny --n0 --lam --temperature --kappa --mobility
@@ -37,31 +46,29 @@ binary_lb metastable [... --fraction-of-binodal --kt ...]
 binary_lb bench      [--nx --ny --steps]
 ```
 
-All parameter names map 1:1 with the Python API (only `T` → `--temperature`,
-`M` → `--mobility`, `kT` → `--kt`). Output JSON schema mirrors Python's
-`run_and_collect` dict (`times`, `steps`, `phi`, `phi_mean`, `params`, `Tc`,
-`phi_binodal`, `phi_spinodal`).
+Parameter names map 1:1 with `binary_LB.make_{spinodal,metastable}_example`
+(only `T` → `--temperature`, `M` → `--mobility`, `kT` → `--kt`).
+Output schema matches Python's `run_and_collect` dict: `times`, `steps`, `phi`,
+`phi_mean`, `params`, `Tc`, `phi_binodal`, `phi_spinodal`.
 
-### Exercise 5 — exercise presets (`P5_1`)
-`temperatures`, `timesteps`, `asymmetric`, `domain-growth`, `nucleation`,
-`minority-count`, `all`, `bench`. These wrap the task-sheet parameter sets.
+Accepts `--precision f32|f64` (default f64). f32 is ~1.5× faster at 128²;
+parity with f64 is within 3e-4 on phi extrema.
 
-### Precision
-Every Rust run accepts `--precision f32|f64`. f32 is ~1.5× faster on the LB
-binary; parity with f64 is within 3e-4 on phi extrema at 128² grids.
+### Parity comparison
 
-## Building standalone binaries
+Both binaries accept `--backend python` to run the Python reference through
+PyO3 (only in builds with the `python-backend` feature — the default local
+build). This flag is there for parity checks and does not ship in the public
+release binaries.
 
-The default build dynamically links libpython (for the `--backend python`
-parity comparison). To produce a binary you can hand to a colleague without
-a Python install, turn off the `python-backend` feature:
+## Building standalone binaries locally
+
+To produce a binary without libpython (no Python install required to run it):
 
 ```sh
-# Dynamic libc (smallest, runs on any recent Linux)
+# Dynamic libc (~2.6 MB, runs on any recent Linux)
+cargo build --profile release-dist --no-default-features --bin hard_disks_mc
 cargo build --profile release-dist --no-default-features --bin binary_lb
-cargo build --profile release-dist --no-default-features --bin P4_1
-cargo build --profile release-dist --no-default-features --bin P4_2
-cargo build --profile release-dist --no-default-features --bin P5_1
 
 # Fully static (works on any Linux kernel, no glibc dependency)
 cargo build --profile release-dist --no-default-features \
@@ -71,52 +78,56 @@ cargo build --profile release-dist --no-default-features \
 Or use the helper:
 
 ```nu
-nu scripts/build-dist.nu binary_lb
-nu scripts/build-dist.nu binary_lb --musl          # fully static
+nu scripts/build-dist.nu binary_lb           # dynamic libc
+nu scripts/build-dist.nu binary_lb --musl    # fully static
 ```
-
-The output lives in `target/release-dist/<bin>` (dynamic) or
-`dist/<bin>` (via the script). All binaries are 2–3 MB and link only libc and
-libm.
 
 ## Publishing via GitHub Releases
 
 The repo ships a workflow at `.github/workflows/release.yml` that builds
-standalone binaries for Linux (musl), macOS (x86_64 + arm64), and Windows on
-every `v*` tag push, then creates a GitHub Release with the artifacts attached.
+standalone `hard_disks_mc` and `binary_lb` for Linux (musl), macOS (x86_64 +
+arm64), and Windows on every `v*` tag push, then creates a GitHub Release
+with the artifacts attached.
 
 ```sh
 git remote add origin git@github.com:<user>/statphys.git
 git push -u origin main
 
-git tag -a v0.1.0 -m "Exercise 4 + 5 Rust ports"
+git tag -a v0.1.0 -m "hard-disks MC + binary-fluid LB Rust ports"
 git push origin v0.1.0            # triggers the release workflow
 ```
 
 You can also trigger it manually from the Actions tab via `workflow_dispatch`.
 
-Output artifacts are named `<bin>-<target>[.exe]`, e.g.
-`binary_lb-x86_64-unknown-linux-musl` or `P5_1-x86_64-pc-windows-msvc.exe`.
-Colleagues download the binary for their platform and run it directly.
+Release artifacts are named `<bin>-<target>[.exe]`:
 
-For a local-only build (no CI), see `scripts/build-dist.nu`:
-
-```nu
-nu scripts/build-dist.nu binary_lb --musl    # fully static, single file
+```
+hard_disks_mc-x86_64-unknown-linux-musl
+hard_disks_mc-x86_64-apple-darwin
+hard_disks_mc-aarch64-apple-darwin
+hard_disks_mc-x86_64-pc-windows-msvc.exe
+binary_lb-x86_64-unknown-linux-musl
+binary_lb-x86_64-apple-darwin
+binary_lb-aarch64-apple-darwin
+binary_lb-x86_64-pc-windows-msvc.exe
 ```
 
 ## For colleagues — running a downloaded binary
 
-No install required. Download the binary from the release, mark it executable,
-and run it:
+No install required. Download the binary for your platform, mark it
+executable, and run:
 
 ```sh
 chmod +x binary_lb
 ./binary_lb spinodal --temperature 0.3 --steps 20000 --output hist.json
+
+chmod +x hard_disks_mc
+./hard_disks_mc --ensemble npt --pressure 2.0 --n-particles 64 --t-end 5000 \
+                --output run.json
 ```
 
-The output `hist.json` is the same schema `run_and_collect` returns in Python,
-so existing analysis notebooks continue to work:
+Outputs are the same JSON schemas the Python references produce, so existing
+analysis code keeps working:
 
 ```python
 import json, numpy as np
@@ -125,9 +136,9 @@ phi_final = np.asarray(d["phi"][-1])
 print(f"phi range: [{phi_final.min():+.3f}, {phi_final.max():+.3f}]")
 ```
 
-## Performance notes
+## Performance baseline
 
-At 128×128 on a typical laptop CPU (single-threaded, best-of-8):
+`binary_lb` at 128×128 on a typical laptop CPU (single-threaded, best-of-8):
 
 | Backend | ms/step |
 |---|---|
@@ -135,6 +146,6 @@ At 128×128 on a typical laptop CPU (single-threaded, best-of-8):
 | Rust f64 | ~4 |
 | Rust f32 | ~3.5 |
 
-~3–5× speedup end-to-end. Further headroom is in replacing the FFT-based
-semi-implicit Cahn-Hilliard solve (~50% of runtime) with a Jacobi or realfft
-implementation, and/or Rayon for parameter sweeps.
+`hard_disks_mc` at N=100, density=0.5, NVT: Rust is 500–1000× faster than
+the Python reference (the Python reference does not use a cell list; the Rust
+side does).

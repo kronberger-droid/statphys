@@ -45,7 +45,7 @@ jobs:
       - name: Build binaries
         shell: bash
         run: |
-          for bin in binary_lb P4_1 P4_2 P5_1; do
+          for bin in binary_lb hard_disks_mc; do
             cargo build --profile release-dist --no-default-features \
                         --target ${{ matrix.target }} --bin "$bin"
           done
@@ -54,7 +54,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          for bin in binary_lb P4_1 P4_2 P5_1; do
+          for bin in binary_lb hard_disks_mc; do
             src="target/${{ matrix.target }}/release-dist/${bin}${{ matrix.ext }}"
             dst="dist/${bin}-${{ matrix.target }}${{ matrix.ext }}"
             cp "$src" "$dst"
@@ -91,12 +91,16 @@ jobs:
         with:
           files: release/*
           body: |
-            Multi-platform Rust binaries for TU Wien Statistical Physics 2 exercises 4 and 5.
+            Standalone Rust ports of the TU Wien Statistical Physics 2 reference
+            Python simulations:
 
-            - `binary_lb-*` — general-purpose binary-fluid LB CLI (drop-in replacement for `binary_LB.py`).
-            - `P4_1-*`, `P4_2-*` — exercise-4 Monte Carlo hard-disks tasks.
-            - `P5_1-*` — exercise-5 LB presets.
+            - `hard_disks_mc-*` — 2D hard-disk Monte Carlo (NVT / NPT). Drop-in
+              replacement for `hard_disks_mc.py::run_simulation`.
+            - `binary_lb-*` — binary-fluid lattice Boltzmann. Drop-in replacement
+              for `binary_LB.py::make_spinodal_example` / `make_metastable_example`
+              + `run_and_collect`.
 
-            See `DISTRIBUTING.md` in the repo for usage. All binaries are standalone;
-            no Python or libpython install required to run them.
+            Same parameter names, same output JSON schema — existing analysis
+            notebooks keep working. No Python or libpython install required.
+            See `DISTRIBUTING.md` in the repo for usage.
           generate_release_notes: true
