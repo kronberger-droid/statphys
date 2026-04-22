@@ -112,11 +112,11 @@ fn metastable(py: Python<'_>, args: &MetastableArgs) -> PyResult<()> {
 pub fn run(task: &Task) -> PyResult<()> {
     Python::with_gil(|py| match task {
         Task::Spinodal(args) => {
-            println!("=== Spinodal (Python) ===");
+            eprintln!("=== Spinodal (Python) ===");
             spinodal(py, args)
         }
         Task::Metastable(args) => {
-            println!("=== Metastable (Python) ===");
+            eprintln!("=== Metastable (Python) ===");
             metastable(py, args)
         }
         Task::Bench { .. } => Err(pyo3::exceptions::PyRuntimeError::new_err(

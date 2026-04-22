@@ -245,21 +245,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match cli.backend {
         Backend::Rust => match &cli.task {
             Task::Spinodal(args) => {
-                println!("=== Spinodal (Rust, {:?}) ===", cli.precision);
+                eprintln!("=== Spinodal (Rust, {:?}) ===", cli.precision);
                 match cli.precision {
                     Precision::F32 => run_spinodal::<f32>(args, cli.precision),
                     Precision::F64 => run_spinodal::<f64>(args, cli.precision),
                 }
             }
             Task::Metastable(args) => {
-                println!("=== Metastable (Rust, {:?}) ===", cli.precision);
+                eprintln!("=== Metastable (Rust, {:?}) ===", cli.precision);
                 match cli.precision {
                     Precision::F32 => run_metastable::<f32>(args, cli.precision),
                     Precision::F64 => run_metastable::<f64>(args, cli.precision),
                 }
             }
             Task::Bench { nx, ny, steps } => {
-                println!("=== Bench (Rust) ===");
+                eprintln!("=== Bench (Rust) ===");
                 match cli.precision {
                     Precision::F32 => run_bench::<f32>(*nx, *ny, *steps, "rust-f32"),
                     Precision::F64 => run_bench::<f64>(*nx, *ny, *steps, "rust-f64"),

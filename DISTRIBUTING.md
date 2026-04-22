@@ -126,15 +126,130 @@ chmod +x hard_disks_mc
                 --output run.json
 ```
 
-Outputs are the same JSON schemas the Python references produce, so existing
-analysis code keeps working:
+Outputs are the same JSON schemas the Python references produce.
+
+## Using from a Python script
+
+Progress lines go to stderr and the JSON payload to stdout, so the binaries
+compose cleanly with `subprocess`. Pass `--output -` to stream JSON to stdout
+instead of writing a file.
+
+### Inline call, no tempfile
 
 ```python
-import json, numpy as np
-d = json.load(open("hist.json"))
-phi_final = np.asarray(d["phi"][-1])
-print(f"phi range: [{phi_final.min():+.3f}, {phi_final.max():+.3f}]")
+import json, subprocess
+import numpy as np
+
+proc = subprocess.run(
+    [
+        "./binary_lb", "spinodal",
+        "--temperature", "0.3",
+        "--steps", "20000",
+        "--snapshot-every", "500",
+        "--seed", "1",
+        "--output", "-",
+    ],
+    capture_output=True, check=True, text=True,
+)
+history = json.loads(proc.stdout)                # same dict `run_and_collect` returns
+phi_final = np.asarray(history["phi"][-1])
+print(f"phi range at t={history['times'][-1]:.0f}: "
+      f"[{phi_final.min():+.3f}, {phi_final.max():+.3f}], "
+      f"binodal=±{history['phi_binodal']:.3f}")
 ```
+
+### Drop-in replacement for the Python reference
+
+Copy this helper into your analysis scripts:
+
+```python
+import json, subprocess
+from pathlib import Path
+
+RUST_BIN = Path("./binary_lb")        # or an absolute path to the downloaded binary
+HDMC_BIN = Path("./hard_disks_mc")
+
+def run_spinodal(**kwargs):
+    """Drop-in replacement for `binary_LB.make_spinodal_example(...)` + `run_and_collect`."""
+    args = [str(RUST_BIN), "spinodal", "--output", "-"]
+    for k, v in kwargs.items():
+        flag = "--" + k.replace("_", "-")
+        args += [flag, str(v)] if not isinstance(v, bool) else ([flag] if v else [])
+    proc = subprocess.run(args, capture_output=True, check=True, text=True)
+    return json.loads(proc.stdout)
+
+def run_metastable(**kwargs):
+    args = [str(RUST_BIN), "metastable", "--output", "-"]
+    for k, v in kwargs.items():
+        flag = "--" + k.replace("_", "-")
+        args += [flag, str(v)] if not isinstance(v, bool) else ([flag] if v else [])
+    proc = subprocess.run(args, capture_output=True, check=True, text=True)
+    return json.loads(proc.stdout)
+
+def run_hard_disks(**kwargs):
+    """Drop-in replacement for `hard_disks_mc.run_simulation(...)`."""
+    args = [str(HDMC_BIN), "--output", "-"]
+    for k, v in kwargs.items():
+        flag = "--" + k.replace("_", "-")
+        args += [flag, str(v)] if not isinstance(v, bool) else ([flag] if v else [])
+    proc = subprocess.run(args, capture_output=True, check=True, text=True)
+    return json.loads(proc.stdout)
+```
+
+Usage is now within one character of the Python API:
+
+```python
+hist = run_spinodal(temperature=0.3, steps=20000, snapshot_every=500, seed=1)
+phi = np.asarray(hist["phi"][-1])
+
+res = run_hard_disks(ensemble="npt", pressure=2.0, n_particles=64,
+                     t_end=5000, save_every=10)
+traj = np.asarray(res["trajectory"])    # shape (n_frames, n_particles, 2)
+```
+
+### Jupyter / notebook workflow
+
+All of the above works from a notebook cell without changes. For long runs,
+tee stderr to show progress:
+
+```python
+proc = subprocess.Popen(
+    [str(RUST_BIN), "spinodal", "--steps", "100000", "--output", "-"],
+    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+)
+# stream stderr to the notebook so colleagues see "=== Spinodal ===" etc.
+for line in proc.stderr:
+    print(line, end="")
+proc.wait()
+history = json.loads(proc.stdout.read())
+```
+
+### Output schema (for reference)
+
+`binary_lb` → same keys as `binary_LB.run_and_collect`:
+
+```
+{ "times": [...], "steps": [...], "phi": [[[...]]],
+  "phi_mean": [...], "params": {...},
+  "Tc": float, "phi_binodal": float, "phi_spinodal": float }
+```
+
+`hard_disks_mc` → same keys as `hard_disks_mc.MonteCarloResult`:
+
+```
+{ "positions": [[x, y], ...],
+  "trajectory": [[[x, y], ...], ...],
+  "box_lengths": [...], "energies": [...], "saved_sweeps": [...],
+  "move_acceptance": float, "volume_acceptance": float,
+  "metadata": { "n_particles": ..., "temperature": ..., ... } }
+```
+
+### Performance note on JSON
+
+JSON text inflates large phi grids ~3–5× compared to raw f64 bytes, and
+`json.load` on a 400 MB output (e.g. 128² × 1000 frames) takes several seconds.
+If you're hitting that, run shorter snapshot intervals (`--snapshot-every 1000`
+instead of `100`) or ask for a `.npz` output variant — it's a 20-line addition.
 
 ## Performance baseline
 

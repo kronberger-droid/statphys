@@ -160,12 +160,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let result = match cli.backend {
         Backend::Rust => {
-            println!("=== hard-disks MC (Rust) ===");
+            eprintln!("=== hard-disks MC (Rust) ===");
             run_rust(&cli)
         }
         #[cfg(feature = "python-backend")]
         Backend::Python => {
-            println!("=== hard-disks MC (Python) ===");
+            eprintln!("=== hard-disks MC (Python) ===");
             python::run(&cli)?
         }
     };

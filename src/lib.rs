@@ -15,11 +15,20 @@ pub fn create_data_file(path: &str) -> File {
 }
 
 /// Serialize `value` as pretty JSON to `path`, creating parent dirs as needed.
+/// The special path `"-"` writes to stdout instead (and suppresses the
+/// "Wrote ..." progress line) so callers can pipe directly into `json.load`.
 pub fn write_json(path: &str, value: &impl Serialize) {
+    if path == "-" {
+        let stdout = std::io::stdout();
+        let mut handle = stdout.lock();
+        serde_json::to_writer_pretty(&mut handle, value).unwrap();
+        writeln!(handle).unwrap();
+        return;
+    }
     let mut file = create_data_file(path);
     serde_json::to_writer_pretty(&mut file, value).unwrap();
     writeln!(file).unwrap();
-    println!("Wrote {path}");
+    eprintln!("Wrote {path}");
 }
 
 /// Analytical solution for diffusion with reflecting walls on [-L/2, +L/2].
