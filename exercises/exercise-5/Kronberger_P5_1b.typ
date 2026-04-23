@@ -2,13 +2,16 @@
 
 #let data = json("data/timesteps.json")
 
-#set page(flipped: true)
+#set page(flipped: true, margin: (x: 1.5cm, y: 1.5cm))
 
-#show lq.selector(lq.diagram): set align(center + horizon)
-#show lq.selector(lq.title): set text(size: 11pt)
+#show lq.selector(lq.title): set text(size: 10pt)
 #show lq.selector(lq.label): set text(size: 9pt)
+#show: lq.set-diagram(width: 5cm, height: 5cm)
 
-#align(center)[#text(size: 20pt)[Kronberger\_P5\_1b: Timestep sweep ($T = 0.45$, sfrac = 0.5)]]
+#align(center)[#text(size: 14pt, weight: "bold")[
+  Kronberger\_P5\_1b: Timestep sweep ($T = 0.45$, sfrac = 0.5)
+]]
+#v(0.3em)
 
 #let ny = data.snapshots.at(0).phi_final.len()
 #let nx = data.snapshots.at(0).phi_final.at(0).len()
@@ -23,35 +26,34 @@
 #let panel(s) = {
   let unstable = has-null(s.phi_final)
   let z = sanitize(s.phi_final)
+  let mesh = lq.colormesh(
+    xedges,
+    yedges,
+    z,
+    map: color.map.turbo,
+  )
   figure(
-    box(
-      height: 100%,
+    stack(
+      dir: ltr,
+      spacing: 0.4em,
       lq.diagram(
         title: [$d t = #s.params.dt$ #if unstable [— *unstable*]],
-        width: 100%,
-        height: 100%,
         xlabel: [x],
         ylabel: [y],
-        lq.colormesh(
-          xedges,
-          yedges,
-          z,
-          map: color.map.turbo,
-        ),
+        mesh,
       ),
+      lq.colorbar(mesh, label: $phi$),
     ),
-    caption: [
-      $phi_"final"$ at $d t = #s.params.dt$
-      #if unstable [(NaN after blow-up — rendered as zeros)]
-    ],
+    caption: [$phi_"final"$ at $d t = #s.params.dt$
+      #if unstable [(NaN)]],
   )
 }
 
 #grid(
   columns: (1fr, 1fr, 1fr),
-  rows: (1fr, 1fr),
-  column-gutter: 1em,
-  row-gutter: 2em,
+  rows: (auto, auto),
+  column-gutter: 0.8em,
+  row-gutter: 0.6em,
   ..data.snapshots.map(panel),
 )
 
@@ -59,18 +61,21 @@
 
 = Task 1b — interpretation
 
-_(to be filled in on paper)_
+The Cahn–Hilliard equation is stiff, so $d t$ trades speed against stability.
 
-- $d t = 0.01$: very small step — simulation is accurate but under-evolved; barely any
-  coarsening visible at the same total step count.
-- $d t = 0.3, 1, 2$: all stable; $phi$ saturates at $plus.minus phi_"bin"$ with
-  similar coarsening progress.
-- $d t = 10$: blow-up (NaN) — shown as uniform colour. The Cahn–Hilliard semi-implicit
-  scheme has a stability limit driven by $d t dot M dot kappa dot k_max^4$; beyond that
-  the inversion of $1 + d t M kappa k^4$ no longer tames the stiff $nabla^4$ term.
-- Other stability factors: $tau > 0.5$ (LB relaxation), advective CFL
-  $|u| d t \/ d x < 1$, and $|phi| < n_0$ (enforced by the clip).
-- Systematic stability study: linearise $phi_"step"$ around a flat $phi_0$ and apply
-  von Neumann analysis on each Fourier mode; or scan $(d t, kappa, M)$ and tag the
-  blow-up boundary.
+- *$d t = 0.01$:* stable but under-evolved. Total simulated time $N dot d t = 200$ is
+  tiny, so we only see the first linear spinodal modes growing out of the initial noise.
+- *$d t = 0.3, 1, 2$:* all stable. $phi$ has saturated at $plus.minus phi_"bin"$ and the
+  morphology is co-continuous, qualitatively like the $T = 0.45$ panel of 1a.
+- *$d t = 10$:* blows up to NaN. The panel is tagged _unstable_.
 
+*Why large $d t$ explodes.* CH has a fourth-order operator $M kappa nabla^4 phi$. Explicit
+time stepping requires
+$d t lt.tilde (d x)^4 \/ (M kappa)$; above that bound the highest-$k$ modes amplify instead
+of decay and the field diverges in a few steps. Other limits (CFL, $tau > 0.5$,
+$|phi| < 1$) normally don't bite first.
+
+*How to study stability systematically.* Either linearise the update and do _von Neumann
+analysis_ (compute the amplification factor $g(k, d t)$ and find where $|g| > 1$ first),
+or sweep $(d t, M kappa)$ empirically and mark the blow-up boundary — it comes out a
+straight line in log-log with slope $-1$, matching the linear prediction.

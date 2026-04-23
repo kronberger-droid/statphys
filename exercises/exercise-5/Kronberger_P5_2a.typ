@@ -48,7 +48,7 @@
   let fit-ys = fit-ts.map(t => fit.A * calc.pow(t, fit.alpha))
   figure(
     box(
-      height: 85%,
+      height: 72%,
       lq.diagram(
         title: [$tau = #curve.tau$],
         width: 100%,
@@ -85,14 +85,11 @@
   ..data.curves.map(panel),
 )
 
-#v(1em)
+#v(0.5em)
 #align(center)[
-  #text(size: 10pt, style: "italic")[
-    Fit is restricted to the pre-saturation window $L(t) < L_"cap"$ (#L-CAP cells). On this
-    128² grid, $L(t)$ plateaus near $N_x\/6 ≈ 21$ once the single-stripe morphology sets in,
-    and the late-time spike where that stripe wraps the periodic box would otherwise
-    dominate the regression. Expected asymptotic exponents are $alpha = 2\/3$
-    (inertial hydrodynamics, low $tau$) and $alpha = 1\/3$ (viscous / Lifshitz–Slyozov, high $tau$).
+  #text(size: 9pt, style: "italic")[
+    Fit window: $L(t) < L_"cap" = #L-CAP$ cells. On a $128^2$ grid $L(t)$ plateaus near
+    $N_x\/6 approx 21$ once one stripe wraps the box, which would contaminate the regression.
   ]
 ]
 
@@ -100,29 +97,44 @@
 
 = Task 2a — interpretation
 
-_(to be filled in on paper)_
+Both fits come out with $alpha approx 0.03$ — _not_ the asymptotic $1\/3$ or $2\/3$ we'd
+expect from theory. Why?
 
-- Fitted exponents $alpha$ for $tau = 0.7$ and $tau = 5$; comparison against the expected
-  $alpha = 2\/3$ (inertial regime) and $alpha = 1\/3$ (viscous / LS).
-- Why does one $tau$ scale faster? Role of Reynolds number, hydrodynamic coupling.
-- Why does the short 128² grid prevent us from reaching the asymptotic regime?
-- Physical meaning of universality classes: identical exponents across systems that share
-  conservation laws and coupled fields even though microscopic $lambda$, $kappa$, $M$ differ.
-- Why study scaling at all — prediction across experimental systems, critical-phenomena
-  language, collapses to a single master curve.
+The fit is restricted to $L(t) < L_"cap" = 18$ cells to avoid the finite-size plateau.
+On a $128^2$ grid that window is very short: for $tau = 0.7$ the system blows through
+$L = 18$ almost immediately (simulation curve runs from $L approx 20$ to $L approx 50$),
+so only a handful of early-time samples actually enter the fit. For $tau = 5$ things
+stay below the cap longer but sit in the pre-asymptotic / linear-instability regime
+where $L$ is still saturating from its initial value rather than tracking a clean
+power law. In both cases we are sampling the _crossover_, not the scaling regime —
+that's why the slopes end up so small and so similar.
 
-= Task 2b — pseudocode sketch
+What we _would_ expect with a big enough box. Small $tau$ means small viscosity
+($nu prop tau - 1\/2$), big Reynolds number, and inertial hydrodynamic coarsening
+with $alpha = 2\/3$ (Furukawa). Large $tau$ means small Re, viscous damping wins, and
+the classical Lifshitz–Slyozov diffusion exponent $alpha = 1\/3$ takes over. Both are
+universality-class results: the exponent depends only on conservation laws and the
+Reynolds regime, not on $lambda$, $kappa$, $M$ or the LB collision model.
 
-_(alternative $L(t)$ estimators; to be presented on the board)_
+*Practical consequence for this assignment:* the 128² grid is too small to resolve the
+two universality classes cleanly. To recover them one would need roughly $1024^2$ (to
+give $L(t)$ at least a decade of clean power-law window before it hits the finite-box
+plateau) and then fit across that window.
 
-+ *Real-space cluster size.* Threshold $phi$ at $plus.minus phi_"bin"\/2$, label connected
-  components via `ndimage.label`, return $L = sqrt(<"cluster_area">)$.
+*Why scaling matters at all.* A single measurement of $L(t)$ places a system in a
+universality class; rescaling $L(t) / t^alpha$ collapses data from very different
+systems (polymer blends, alloys, binary fluids) onto one master curve. That is what
+makes exponents like $1\/3$ and $2\/3$ so useful in practice.
 
-+ *Auto-correlation first zero.* Compute $C(r) = <phi(x) phi(x + r)>$ radially averaged;
-  $L$ = smallest $r$ with $C(r) = 0$.
+= Task 2b — why $L = 2 pi \/ ⟨k⟩$ and alternatives
 
-+ *Interface-length per area.* Count domain-wall cells via $|"grad" phi| > "thr"$, then
-  $L = A_"total" / A_"wall"$ (Cahn's formula).
+Using the first moment of the structure factor works because $S(k, t)$ peaks at
+$k^*(t) tilde 1\/L$, so $⟨k⟩$ tracks the inverse domain size — robust even when
+the peak is broad. Three alternatives for the board:
 
-The chosen $L = 2 pi \/ <k>$ is equivalent to the second-moment-of-correlation length
-and is robust when the structure factor peaks broadly, which is exactly the LB spinodal case.
++ *Cluster size.* Threshold $phi$, label connected components, $L = sqrt(⟨"area"⟩)$.
++ *Autocorrelation.* $C(r)$ via FFT, $L =$ first zero of $C(r)$.
++ *Interface length* (Cahn / Porod). Count wall cells ($|nabla phi|$ large),
+  $L = "total cells" \/ "wall cells"$.
+
+All three recover the same asymptotic $alpha$; they differ in prefactor and noise.

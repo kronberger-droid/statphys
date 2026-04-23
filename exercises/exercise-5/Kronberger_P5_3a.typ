@@ -41,20 +41,23 @@
 
 = Task 3a — interpretation
 
-_(to be filled in on paper)_
+All three runs sit at fraction-binodal $= 0.2$ with thermal noise $k T = 0.004$ on.
 
-- Runs 1 and 2 (both $T = 0.525$): metastable regime — system sits between binodal and
-  spinodal. Nucleation is stochastic: clusters appear, sometimes shrink, and only one
-  (or a few) grow past the critical radius. Identical parameters, different seeds → very
-  different trajectories.
-- Run 3 ($T = 0.45$): quenched deep into the spinodal. No barrier; the system breaks
-  into the new phase everywhere simultaneously. Largest cluster grows monotonically and
-  quickly.
-- *Why no metastability in the symmetric case* (sfrac $= 0.5$): the composition sits at
-  the maximum of the binodal curve where the binodal and spinodal meet. There is no
-  free-energy barrier, so the system is always unstable below $T_c$. Metastability requires
-  $phi_"spin" < |phi_0| < phi_"bin"$, which only happens at asymmetric compositions.
-- *Can we predict when nucleation starts/ends?* No — only the statistical distribution is
-  predictable. The critical-nucleus formation time is exponential in $Delta F^*\/k T$, so
-  the waiting time has a long tail and finite samples look very random.
+- *Runs 1, 2 — $T = 0.525$, different seeds.* Both are in the metastable strip between
+  binodal and spinodal. A barrier $Delta F^*$ separates the homogeneous state from
+  phase separation, and nucleation is a stochastic barrier-crossing event with waiting
+  time $t_"nuc" prop e^(Delta F^* \/ k T)$. Same parameters, different seeds → wildly
+  different trajectories: one may nucleate early and grow, the other stalls as
+  sub-critical nuclei keep dying. This is the fingerprint of metastability.
+- *Run 3 — $T = 0.45$.* Deeper quench pushes past the spinodal, no barrier, everything
+  grows at once. Largest cluster climbs monotonically and is seed-insensitive.
+
+*Why no metastability at sfrac $= 0.5$.* At $phi_0 = 0$ the binodal and spinodal curves
+meet at the top of the dome: $Delta F^* = 0$. Any quench below $T_C$ is automatically
+inside the spinodal. Metastability needs $phi_"spin" < |phi_0| < phi_"bin"$, i.e. an
+asymmetric composition.
+
+*Predictable?* Only statistically. Nucleation _start_ is exponentially distributed,
+variance = mean, so realisations span many decades. Once the critical nucleus is there,
+growth is reasonably deterministic.
 

@@ -41,21 +41,20 @@
 
 = Task 3b — interpretation
 
-_(to be filled in on paper)_
+The two observables answer different questions:
 
-Comparison of the two observables:
+- *Largest cluster (3a):* max over connected components — size of the _biggest_
+  minority domain. Jumps on merges, resets when a sub-critical nucleus dies.
+  Close to a percolation / critical-nucleus observable.
+- *Minority-cell count (this plot):* total number of minority cells regardless of
+  connectivity — the _volume_ of the new phase. Smooth and monotonic once
+  nucleation has happened.
 
-- *Largest cluster* (3a): max over connected components. Grows with the biggest nucleus;
-  can plateau or shrink when a sub-critical nucleus dissolves, or jump when two nuclei
-  merge. It measures the *size of the dominant domain*.
-- *Minority cell count* (this plot): sums all minority cells regardless of connectivity.
-  It measures the *total volume* of the new phase.
+*Comparison.* For the deep-quench spinodal run ($T = 0.45$) the two curves look
+almost identical because one dominant domain contains essentially all the minority
+phase. For the metastable runs ($T = 0.525$) the cluster signal is noisy (jumps, resets)
+while the cell count grows smoothly.
 
-Physically the second is closer to an order-parameter / concentration measurement,
-the first is closer to a percolation / critical-nucleus measurement.
-
-For the deep-quench (run 3) spinodal case the two look similar because one growing
-cluster dominates. For the metastable runs (1, 2) the cluster signal is noisier — it
-can fluctuate or reset when a nucleus dies — whereas the cell count climbs monotonically
-with the growing phase volume.
+*Which to use.* "When did a stable nucleus form?" → largest cluster. "How much of the
+system has flipped?" → cell count.
 
