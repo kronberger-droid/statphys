@@ -1,7 +1,7 @@
 #import "@preview/lilaq:0.5.0" as lq
 #import "lib.typ": gauss
 
-#let data = json("../data/P1_1.json")
+#let data = json("data/P1_1.json")
 #let sigma2 = data.at("sigma2")
 
 #set page(flipped: true)

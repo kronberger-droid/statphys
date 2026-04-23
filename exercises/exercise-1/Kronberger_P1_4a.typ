@@ -2,7 +2,7 @@
 
 #set page(flipped: true, margin: (x: 1.2cm, top: 0.8cm, bottom: 1cm))
 
-#let data = json("../data/P1_4a.json")
+#let data = json("data/P1_4a.json")
 #let reflect = data.at("methods").at(0)
 #let analytical = data.at("analytical")
 

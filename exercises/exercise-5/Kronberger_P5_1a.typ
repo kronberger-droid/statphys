@@ -1,7 +1,7 @@
 #import "@preview/lilaq:0.5.0" as lq
 
-#let short = json("../data/P5_1/temperatures.json")
-#let long = json("../data/P5_1/temperatures_long.json")
+#let short = json("data/temperatures.json")
+#let long = json("data/temperatures_long.json")
 
 #set page(flipped: true)
 

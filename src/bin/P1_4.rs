@@ -121,9 +121,9 @@ fn main() {
             methods,
             analytical: analytical.clone(),
         };
-        let file = statphys::create_data_file("data/P1_4a.json");
+        let file = statphys::create_data_file("exercises/exercise-1/data/P1_4a.json");
         serde_json::to_writer_pretty(file, &output).expect("failed to write JSON");
-        eprintln!("Wrote data/P1_4a.json");
+        eprintln!("Wrote exercises/exercise-1/data/P1_4a.json");
     }
 
     // 4b: all methods, larger sigma to show wall artifacts
@@ -147,8 +147,8 @@ fn main() {
             methods,
             analytical: analytical.clone(),
         };
-        let file = statphys::create_data_file("data/P1_4b.json");
+        let file = statphys::create_data_file("exercises/exercise-1/data/P1_4b.json");
         serde_json::to_writer_pretty(file, &output).expect("failed to write JSON");
-        eprintln!("Wrote data/P1_4b.json");
+        eprintln!("Wrote exercises/exercise-1/data/P1_4b.json");
     }
 }

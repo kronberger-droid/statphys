@@ -1,6 +1,11 @@
 /target
-/data
-/output
 /dist
 __pycache__
 .claude/
+
+# Generated per-exercise artifacts
+exercises/*/data/
+exercises/*/*.pdf
+# Keep problem sheets (committed)
+!exercises/*/Aufgaben*.pdf
+!exercises/*/NMS*.pdf

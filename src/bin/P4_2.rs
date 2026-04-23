@@ -150,7 +150,7 @@ fn task_energy() {
             energy_per_particle: energies,
         };
 
-        write_json(&format!("data/P4_2/energy_{name}.json"), &output);
+        write_json(&format!("exercises/exercise-4/data/P4_2/energy_{name}.json"), &output);
     }
 }
 
@@ -221,7 +221,7 @@ fn task_rdf() {
             g_r,
         };
 
-        write_json(&format!("data/P4_2/rdf_{name}.json"), &output);
+        write_json(&format!("exercises/exercise-4/data/P4_2/rdf_{name}.json"), &output);
     }
 }
 

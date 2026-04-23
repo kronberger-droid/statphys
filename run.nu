@@ -1,65 +1,72 @@
-# Build, plot, and preview a statphys exercise.
-# Blocks on typst watch. Ctrl+C kills watch and closes zathura.
-# Usage: run P1_1a
-def main [name: string] {
-  let typ = $"typst/Kronberger_($name).typ"
-
-  # Map exercise names to binary + subcommand
-  # both_backends: run with --backend python in addition to the default rust
+# Build simulation data and compile a typst plot for an exercise subpoint.
+# Usage:
+#   run P5_1a                   # run simulation + compile PDF
+#   run P5_1a --skip-sim        # only recompile the PDF (skip cargo)
+#   run P5_1a --open            # spawn zathura on the PDF after compile
+#   run P5_1a --both-backends   # force both rust + python backend runs
+#
+# Typst watching is intentionally not part of this script — run
+# `typst watch --root . exercises/<folder>/<name>.typ <pdf>` separately
+# (or a per-folder wrapper) when you're editing prose in a typ file.
+def main [
+  name: string,
+  --skip-sim,        # skip cargo, just recompile the PDF
+  --open,            # open zathura on the PDF after compile
+  --both-backends,   # run both rust + python backends (if task supports it)
+] {
+  # Map exercise name -> (cargo bin, subcommand, exercise folder, default both-backends).
+  # A `null` sub means the bin has no subcommand (P1_*).
   let task = match $name {
-    "P4_1_1a" => { bin: "P4_1", sub: "timing",     both_backends: true }
-    "P4_1_1b" => { bin: "P4_1", sub: "acceptance",  both_backends: false }
-    "P4_1_2a" => { bin: "P4_1", sub: "packing",     both_backends: false }
-    "P4_1_2b" => { bin: "P4_1", sub: "henderson",   both_backends: true }
-    "P4_2a"   => { bin: "P4_2", sub: "energy",      both_backends: false }
-    "P4_2b"   => { bin: "P4_2", sub: "rdf",         both_backends: false }
-    "P5_1a"   => { bin: "P5_1", sub: "temperatures",  both_backends: false }
-    "P5_1b"   => { bin: "P5_1", sub: "timesteps",     both_backends: false }
-    "P5_1c"   => { bin: "P5_1", sub: "asymmetric",    both_backends: false }
-    "P5_2a"   => { bin: "P5_1", sub: "domain-growth", both_backends: false }
-    "P5_3a"   => { bin: "P5_1", sub: "nucleation",    both_backends: false }
-    "P5_3b"   => { bin: "P5_1", sub: "minority-count", both_backends: false }
+    "P4_1_1a" => { bin: "P4_1", sub: "timing",         folder: "exercise-4", both: true  }
+    "P4_1_1b" => { bin: "P4_1", sub: "acceptance",     folder: "exercise-4", both: false }
+    "P4_1_2a" => { bin: "P4_1", sub: "packing",        folder: "exercise-4", both: false }
+    "P4_1_2b" => { bin: "P4_1", sub: "henderson",      folder: "exercise-4", both: true  }
+    "P4_2a"   => { bin: "P4_2", sub: "energy",         folder: "exercise-4", both: false }
+    "P4_2b"   => { bin: "P4_2", sub: "rdf",            folder: "exercise-4", both: false }
+    "P5_1a"   => { bin: "P5_1", sub: "temperatures",   folder: "exercise-5", both: false }
+    "P5_1b"   => { bin: "P5_1", sub: "timesteps",      folder: "exercise-5", both: false }
+    "P5_1c"   => { bin: "P5_1", sub: "asymmetric",     folder: "exercise-5", both: false }
+    "P5_2a"   => { bin: "P5_1", sub: "domain-growth",  folder: "exercise-5", both: false }
+    "P5_3a"   => { bin: "P5_1", sub: "nucleation",     folder: "exercise-5", both: false }
+    "P5_3b"   => { bin: "P5_1", sub: "minority-count", folder: "exercise-5", both: false }
     _ => {
+      # Fallback: P<sheet>_<ex><part> -> bin strips trailing letter, folder from sheet digit.
       let bin = $name | str replace -r '[a-z]$' ''
-      { bin: $bin, sub: null, both_backends: false }
+      let sheet = $name | parse -r 'P(?<n>\d+)_' | get 0.n?
+      { bin: $bin, sub: null, folder: $"exercise-($sheet)", both: false }
     }
   }
 
-  # Derive output folder from exercise name (P4_1_1a -> P4_1, P1_1a -> P1, P4_2a -> P4_2)
-  let folder = $task.bin
-  let pdf = ($"output/($folder)/Kronberger_($name).pdf" | path expand)
-  mkdir $"output/($folder)"
+  let run_both = ($both_backends or $task.both)
+  let typ = $"exercises/($task.folder)/Kronberger_($name).typ"
+  let pdf = $"exercises/($task.folder)/Kronberger_($name).pdf"
 
-  if $task.sub != null {
-    print $"(ansi cyan)Building(ansi reset) cargo run --bin ($task.bin) -- ($task.sub)"
-    cargo run --release --bin $task.bin -- $task.sub
-    if $task.both_backends {
-      print $"(ansi cyan)Building(ansi reset) cargo run --bin ($task.bin) -- ($task.sub) --backend python"
-      cargo run --release --bin $task.bin -- $task.sub --backend python
+  if not $skip_sim {
+    if $task.sub != null {
+      print $"(ansi cyan)Simulating(ansi reset) cargo run --bin ($task.bin) -- ($task.sub)"
+      cargo run --release --bin $task.bin -- $task.sub
+      if $run_both {
+        print $"(ansi cyan)Simulating(ansi reset) cargo run --bin ($task.bin) -- ($task.sub) --backend python"
+        cargo run --release --bin $task.bin -- $task.sub --backend python
+      }
+    } else {
+      print $"(ansi cyan)Simulating(ansi reset) cargo run --bin ($task.bin)"
+      cargo run --release --bin $task.bin
     }
-  } else {
-    print $"(ansi cyan)Building(ansi reset) cargo run --bin ($task.bin)"
-    cargo run --release --bin $task.bin
   }
 
-  # Compile once so the PDF exists before opening zathura
   print $"(ansi cyan)Compiling(ansi reset) ($typ)"
-  typst compile --root ../ $typ $pdf
+  typst compile --root . $typ $pdf
 
-  # Open zathura if not already open
-  let windows = niri msg -j windows | from json
-  let not_open = ($windows | where app_id == "org.pwmt.zathura" | where title =~ $pdf | is-empty)
-
-  if $not_open {
-    print $"(ansi cyan)Opening(ansi reset) zathura"
-    niri msg action spawn -- zathura $pdf
-    sleep 500ms
-    niri msg action consume-or-expel-window-right
-    niri msg action focus-column-left
+  if $open {
+    let windows = niri msg -j windows | from json
+    let pdf_abs = ($pdf | path expand)
+    let not_open = ($windows | where app_id == "org.pwmt.zathura" | where title =~ $pdf_abs | is-empty)
+    if $not_open {
+      print $"(ansi cyan)Opening(ansi reset) zathura on ($pdf)"
+      niri msg action spawn -- zathura $pdf_abs
+    } else {
+      print $"(ansi yellow)zathura already open on ($pdf)(ansi reset)"
+    }
   }
-
-  # Block on typst watch with trap for cleanup
-  print $"(ansi cyan)Watching(ansi reset) ($typ) \(Ctrl+C to stop\)"
-  let bash_cmd = "trap 'pkill -f \"zathura.*" + $name + "\"' EXIT; typst watch --root ../ " + $typ + " " + $pdf
-  bash -c $bash_cmd
 }

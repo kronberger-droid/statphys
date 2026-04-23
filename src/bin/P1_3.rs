@@ -16,6 +16,6 @@ fn main() {
         curves,
     };
 
-    let file = statphys::create_data_file("data/P1_3.json");
+    let file = statphys::create_data_file("exercises/exercise-1/data/P1_3.json");
     serde_json::to_writer_pretty(file, &output).expect("failed to write JSON");
 }

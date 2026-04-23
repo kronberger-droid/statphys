@@ -112,7 +112,7 @@ fn temperature_sweep(bridge: &Bridge<'_>, steps: usize, output: &str) -> PyResul
     }
 
     write_json(
-        &format!("data/P5_1/{output}.json"),
+        &format!("exercises/exercise-5/data/{output}.json"),
         &SnapshotCollection { snapshots },
     );
     Ok(())
@@ -150,7 +150,7 @@ fn timesteps(bridge: &Bridge<'_>) -> PyResult<()> {
     }
 
     write_json(
-        "data/P5_1/timesteps.json",
+        "exercises/exercise-5/data/timesteps.json",
         &SnapshotCollection { snapshots },
     );
     Ok(())
@@ -181,7 +181,7 @@ fn asymmetric(bridge: &Bridge<'_>) -> PyResult<()> {
     }
 
     write_json(
-        "data/P5_1/asymmetric.json",
+        "exercises/exercise-5/data/asymmetric.json",
         &SnapshotCollection { snapshots },
     );
     Ok(())
@@ -215,7 +215,7 @@ fn domain_growth(bridge: &Bridge<'_>) -> PyResult<()> {
     }
 
     write_json(
-        "data/P5_1/domain_growth.json",
+        "exercises/exercise-5/data/domain_growth.json",
         &DomainGrowthOutput { curves },
     );
     Ok(())
@@ -264,7 +264,7 @@ fn nucleation(bridge: &Bridge<'_>) -> PyResult<()> {
     }
 
     write_json(
-        "data/P5_1/nucleation.json",
+        "exercises/exercise-5/data/nucleation.json",
         &NucleationOutput { curves },
     );
     Ok(())

@@ -1,6 +1,6 @@
 #import "@preview/lilaq:0.5.0" as lq
 
-#let data = json("../data/P5_1/domain_growth.json")
+#let data = json("data/domain_growth.json")
 
 #set page(flipped: true)
 

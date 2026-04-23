@@ -2,7 +2,7 @@
 
 #set page(flipped: true, margin: (x: 1.2cm, top: 0.8cm, bottom: 1cm))
 
-#let data = json("../data/P1_4b.json")
+#let data = json("data/P1_4b.json")
 #let analytical = data.at("analytical")
 #let method_names = ("reflect", "stop at wall", "don't move", "redraw")
 #let method_colors = (blue, orange, green, purple)

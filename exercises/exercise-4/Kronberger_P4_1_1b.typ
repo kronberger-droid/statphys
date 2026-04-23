@@ -1,5 +1,5 @@
 #import "@preview/lilaq:0.5.0" as lq
-#let data = json("../data/P4_1/acceptance_rust.json")
+#let data = json("data/P4_1/acceptance_rust.json")
 #let densities = (0.1, 0.5, 0.8)
 
 #let curves = densities.map(rho => {

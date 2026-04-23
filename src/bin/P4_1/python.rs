@@ -56,7 +56,7 @@ fn timing(hsmc: &Bound<'_, PyModule>) -> PyResult<()> {
         points,
     };
 
-    write_json("data/P4_1/timing_python.json", &output);
+    write_json("exercises/exercise-4/data/P4_1/timing_python.json", &output);
     Ok(())
 }
 
@@ -101,7 +101,7 @@ fn acceptance(hsmc: &Bound<'_, PyModule>) -> PyResult<()> {
         points,
     };
 
-    write_json("data/P4_1/acceptance_python.json", &output);
+    write_json("exercises/exercise-4/data/P4_1/acceptance_python.json", &output);
     Ok(())
 }
 
@@ -153,7 +153,7 @@ fn packing(hsmc: &Bound<'_, PyModule>) -> PyResult<()> {
         curves,
     };
 
-    write_json("data/P4_1/packing_python.json", &output);
+    write_json("exercises/exercise-4/data/P4_1/packing_python.json", &output);
     Ok(())
 }
 
@@ -213,7 +213,7 @@ fn henderson(hsmc: &Bound<'_, PyModule>) -> PyResult<()> {
         points,
     };
 
-    write_json("data/P4_1/henderson_python.json", &output);
+    write_json("exercises/exercise-4/data/P4_1/henderson_python.json", &output);
     Ok(())
 }
 

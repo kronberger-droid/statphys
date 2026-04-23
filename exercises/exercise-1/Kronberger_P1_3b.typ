@@ -51,7 +51,7 @@ $
   size: 20pt,
 )[Kronberger P1\_3: Diffusion with reflecting walls]]
 
-#let data = json("../data/P1_3.json")
+#let data = json("data/P1_3.json")
 
 #figure(
   lq.diagram(

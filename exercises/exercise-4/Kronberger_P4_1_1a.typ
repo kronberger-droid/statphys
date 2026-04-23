@@ -1,6 +1,6 @@
 #import "@preview/lilaq:0.5.0" as lq
-#let py_data = json("../data/P4_1/timing_python.json")
-#let rs_data = json("../data/P4_1/timing_rust.json")
+#let py_data = json("data/P4_1/timing_python.json")
+#let rs_data = json("data/P4_1/timing_rust.json")
 
 #set page(flipped: true)
 

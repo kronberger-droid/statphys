@@ -22,11 +22,13 @@ statphys/
 │       ├── binary_lb/                      # standalone LB binary (wraps src/lb)
 │       ├── hard_disks_mc/                  # standalone MC binary (wraps src/mc)
 │       └── P<sheet>_<ex>/                  # exercise-specific task presets
-├── typst/
-│   └── Kronberger_P<sheet>_<ex><part>.typ  # plot files
-├── data/                                   # generated JSON (gitignored)
-├── output/                                 # generated PDFs (gitignored)
-├── exercises/                              # problem sheets + Python references
+├── exercises/
+│   └── exercise-<n>/
+│       ├── Aufgaben*.pdf                   # problem sheet (committed)
+│       ├── *.py                            # Python reference code (committed)
+│       ├── Kronberger_P*.typ               # plot sources (committed)
+│       ├── Kronberger_P*.pdf               # compiled PDFs (gitignored)
+│       └── data/                           # generated JSON (gitignored)
 ├── scripts/build-dist.nu                   # local standalone-binary builder
 ├── .github/workflows/release.yml           # multi-platform release on `v*` tags
 ├── run.nu                                  # build + preview script (optional)

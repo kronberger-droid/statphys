@@ -68,7 +68,7 @@ $
 // Plotting:
 #align(center)[#text(size: 20pt)[Kronberger_P1_2b]]
 
-#let data = json("../data/P1_2.json")
+#let data = json("data/P1_2.json")
 #let make-hist-plot(hist) = {
   let step = hist.at("n_steps")
   let density = hist.at("density")

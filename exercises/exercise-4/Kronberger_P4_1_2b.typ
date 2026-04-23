@@ -1,6 +1,6 @@
 #import "@preview/lilaq:0.5.0" as lq
-#let rs_data = json("../data/P4_1/henderson_rust.json")
-#let py_data = json("../data/P4_1/henderson_python.json")
+#let rs_data = json("data/P4_1/henderson_rust.json")
+#let py_data = json("data/P4_1/henderson_python.json")
 
 #set page(flipped: true)
 

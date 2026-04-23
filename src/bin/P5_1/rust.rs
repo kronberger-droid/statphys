@@ -105,7 +105,7 @@ where
         println!("  {label}: done");
     }
     write_json(
-        &format!("data/P5_1/{output_name}.json"),
+        &format!("exercises/exercise-5/data/{output_name}.json"),
         &SnapshotCollection { snapshots },
     );
     Ok(())
@@ -198,7 +198,7 @@ where
     }
     let _ = precision;
     write_json(
-        "data/P5_1/domain_growth.json",
+        "exercises/exercise-5/data/domain_growth.json",
         &DomainGrowthOutput { curves },
     );
     Ok(())
@@ -254,7 +254,7 @@ where
     }
     let _ = precision;
     write_json(
-        "data/P5_1/nucleation.json",
+        "exercises/exercise-5/data/nucleation.json",
         &NucleationOutput { curves },
     );
     Ok(())

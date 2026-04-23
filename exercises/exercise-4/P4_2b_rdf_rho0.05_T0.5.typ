@@ -1,5 +1,5 @@
 #import "@preview/lilaq:0.5.0" as lq
-#let d = json("../data/P4_2/rdf_rho0.05-T1.0.json")
+#let d = json("data/P4_2/rdf_rho0.05-T0.5.json")
 #set page(flipped: true)
 
 #figure(

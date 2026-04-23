@@ -175,7 +175,7 @@ fn timing_rust() {
         points,
     };
 
-    write_json("data/P4_1/timing_rust.json", &output);
+    write_json("exercises/exercise-4/data/P4_1/timing_rust.json", &output);
 }
 
 fn acceptance_rust() {
@@ -215,7 +215,7 @@ fn acceptance_rust() {
         points,
     };
 
-    write_json("data/P4_1/acceptance_rust.json", &output);
+    write_json("exercises/exercise-4/data/P4_1/acceptance_rust.json", &output);
 }
 
 fn packing_rust() {
@@ -260,7 +260,7 @@ fn packing_rust() {
         curves,
     };
 
-    write_json("data/P4_1/packing_rust.json", &output);
+    write_json("exercises/exercise-4/data/P4_1/packing_rust.json", &output);
 }
 
 fn henderson_rust() {
@@ -317,7 +317,7 @@ fn henderson_rust() {
         points,
     };
 
-    write_json("data/P4_1/henderson_rust.json", &output);
+    write_json("exercises/exercise-4/data/P4_1/henderson_rust.json", &output);
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

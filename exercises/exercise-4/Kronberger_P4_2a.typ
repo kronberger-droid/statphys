@@ -6,7 +6,7 @@
   "rho0.3-T0.5",
   "rho0.3-T1.0",
 )
-#let data = states.map(s => json("../data/P4_2/energy_" + s + ".json"))
+#let data = states.map(s => json("data/P4_2/energy_" + s + ".json"))
 
 #set page(flipped: true)
 
