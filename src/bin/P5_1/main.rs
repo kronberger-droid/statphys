@@ -69,6 +69,9 @@ pub enum Task {
 pub const TASK1_LAM: f64 = 1.1;
 pub const TASK1_TEMPERATURES: [f64; 3] = [0.55, 0.45, 0.3];
 pub const TASK1_STEPS: usize = 20000;
+/// Long-running companion sweep for 1a — surfaces late-time coarsening now that
+/// the Rust backend makes a 200k-step sweep cheap.
+pub const TASK1_STEPS_LONG: usize = 200000;
 pub const TASK1_DT: f64 = 0.5;
 pub const TASK1_SPINODAL_FRACTION: f64 = 0.5;
 

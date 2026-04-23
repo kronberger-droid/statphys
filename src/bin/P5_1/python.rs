@@ -83,7 +83,7 @@ fn extract_times(history: &Bound<'_, PyAny>) -> PyResult<Vec<f64>> {
 
 // --- Task 1a: temperature sweep ---------------------------------------------
 
-fn temperatures(bridge: &Bridge<'_>) -> PyResult<()> {
+fn temperature_sweep(bridge: &Bridge<'_>, steps: usize, output: &str) -> PyResult<()> {
     let py = bridge.lb.py();
     let mut snapshots = Vec::new();
 
@@ -95,7 +95,7 @@ fn temperatures(bridge: &Bridge<'_>) -> PyResult<()> {
         kwargs.set_item("spinodal_fraction", TASK1_SPINODAL_FRACTION)?;
         kwargs.set_item("seed", 1)?;
         let sim = call_make_spinodal(bridge, &kwargs)?;
-        let history = run_and_collect(bridge, &sim, TASK1_STEPS, SNAPSHOT_EVERY, false)?;
+        let history = run_and_collect(bridge, &sim, steps, SNAPSHOT_EVERY, false)?;
 
         snapshots.push(SnapshotOutput {
             label: format!("T={t}"),
@@ -105,17 +105,24 @@ fn temperatures(bridge: &Bridge<'_>) -> PyResult<()> {
                 "lam": TASK1_LAM,
                 "dt": TASK1_DT,
                 "spinodal_fraction": TASK1_SPINODAL_FRACTION,
-                "steps": TASK1_STEPS,
+                "steps": steps,
             }),
         });
         println!("  T={t}: done");
     }
 
     write_json(
-        "data/P5_1/temperatures.json",
+        &format!("data/P5_1/{output}.json"),
         &SnapshotCollection { snapshots },
     );
     Ok(())
+}
+
+fn temperatures(bridge: &Bridge<'_>) -> PyResult<()> {
+    println!("  [short sweep, {} steps]", TASK1_STEPS);
+    temperature_sweep(bridge, TASK1_STEPS, "temperatures")?;
+    println!("  [long sweep, {} steps]", TASK1_STEPS_LONG);
+    temperature_sweep(bridge, TASK1_STEPS_LONG, "temperatures_long")
 }
 
 // --- Task 1b: dt sweep ------------------------------------------------------
